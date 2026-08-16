@@ -68,6 +68,19 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS shares (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id TEXT NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                password_hash TEXT,
+                expires_at TEXT,
+                access_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(file_id) REFERENCES files(file_id) ON DELETE CASCADE
+            )
+        """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_shares_token ON shares(token);")
         # Dynamic column migrations for existing databases (MUST RUN BEFORE INDEX CREATION)
         columns_to_add = [
             ("is_chunked", "BOOLEAN DEFAULT 0"),
@@ -436,6 +449,46 @@ async def update_file_thumbnail(file_id: str, thumbnail_blob: bytes) -> bool:
         """, (thumbnail_blob, file_id))
         await db.commit()
         return True
+
+async def increment_share_access(token: str):
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        await db.execute("UPDATE shares SET access_count = access_count + 1 WHERE token = ?", (token,))
+        await db.commit()
+
+async def create_share(file_id: str, token: str, password: Optional[str] = None, expires_at: Optional[str] = None) -> bool:
+    pw_hash = hash_password(password) if password else None
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        await db.execute(
+            "INSERT OR REPLACE INTO shares (file_id, token, password_hash, expires_at) VALUES (?, ?, ?, ?)",
+            (file_id, token, pw_hash, expires_at)
+        )
+        await db.commit()
+        return True
+
+async def get_share_by_token(token: str) -> Optional[Dict[str, Any]]:
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM shares WHERE token = ?", (token,)) as cursor:
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+async def list_shares() -> List[Dict[str, Any]]:
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("""
+            SELECT s.token, s.file_id, s.expires_at, s.access_count, s.created_at,
+                   f.file_name, f.file_size, f.mime_type, f.has_thumbnail
+            FROM shares s
+            LEFT JOIN files f ON f.file_id = s.file_id
+            ORDER BY s.created_at DESC
+        """) as cursor:
+            return [dict(r) for r in await cursor.fetchall()]
+
+async def revoke_share(token: str) -> bool:
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        cursor = await db.execute("DELETE FROM shares WHERE token = ?", (token,))
+        await db.commit()
+        return cursor.rowcount > 0
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.strip().encode('utf-8')).hexdigest()

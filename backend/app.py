@@ -24,7 +24,8 @@ try:
         list_folders, create_folder_db, delete_folder_db, rename_folder_db,
         add_file_chunk, get_file_chunks,
         get_file_thumbnail, get_incomplete_chunks,
-        lock_folder_db, unlock_folder_db, verify_folder_password_db, list_locked_folders_db
+        lock_folder_db, unlock_folder_db, verify_folder_password_db, list_locked_folders_db,
+        create_share, get_share_by_token, list_shares, revoke_share, increment_share_access
     )
     from bot_cluster import cluster, generate_video_poster, extract_video_thumbnail
     from telegram_user import user_manager
@@ -37,7 +38,8 @@ except ImportError:
         list_folders, create_folder_db, delete_folder_db, rename_folder_db,
         add_file_chunk, get_file_chunks,
         get_file_thumbnail, get_incomplete_chunks,
-        lock_folder_db, unlock_folder_db, verify_folder_password_db, list_locked_folders_db
+        lock_folder_db, unlock_folder_db, verify_folder_password_db, list_locked_folders_db,
+        create_share, get_share_by_token, list_shares, revoke_share, increment_share_access
     )
     from .bot_cluster import cluster, generate_video_poster, extract_video_thumbnail
     from .telegram_user import user_manager
@@ -369,6 +371,11 @@ class VerifyFolderRequest(BaseModel):
 class RenameFolderRequest(BaseModel):
     folder_path: str
     new_name: str
+
+class ShareCreateRequest(BaseModel):
+    file_id: str
+    password: Optional[str] = None
+    expires_days: Optional[int] = None
 
 @app.get("/api/files")
 async def api_list_files(
@@ -1042,12 +1049,31 @@ async def download_or_stream(
     file_id: str,
     filename: Optional[str] = None,
     password: Optional[str] = None,
+    share_token: Optional[str] = None,
+    share_password: Optional[str] = None,
     request: Request = None
 ):
     file_data = await get_file_by_id(file_id)
     if not file_data:
         raise HTTPException(status_code=404, detail="File not found")
-    
+
+    # Share-link gating (password-protected share links)
+    if share_token:
+        share = await get_share_by_token(share_token)
+        if not share:
+            raise HTTPException(status_code=404, detail="Shared link is invalid.")
+        if share.get("expires_at"):
+            try:
+                exp = datetime.datetime.fromisoformat(share["expires_at"])
+                if datetime.datetime.now() > exp:
+                    raise HTTPException(status_code=410, detail="This shared link has expired.")
+            except ValueError:
+                pass
+        if share.get("password_hash"):
+            if not share_password or share["password_hash"] != hash_password(share_password):
+                raise HTTPException(status_code=403, detail="This share link is password protected.")
+        await increment_share_access(share_token)
+
     if file_data.get("password") and file_data["password"] != password:
         raise HTTPException(status_code=403, detail="File is password protected. Invalid password.")
 
@@ -1090,6 +1116,41 @@ async def get_shared_file_info(share_token: str):
         "file_id": file_data["file_id"],
         "is_chunked": bool(file_data.get("is_chunked"))
     }
+
+@app.post("/api/share")
+async def api_create_share(req: ShareCreateRequest):
+    file_data = await get_file_by_id(req.file_id)
+    if not file_data:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    token = secrets.token_urlsafe(16)
+    expires_at = (
+        (datetime.datetime.now() + datetime.timedelta(days=req.expires_days)).isoformat()
+        if req.expires_days else None
+    )
+    await create_share(req.file_id, token, password=req.password, expires_at=expires_at)
+
+    share_url = f"{config_mgr.config.base_url}/dl/{req.file_id}/{file_data['file_name']}?share_token={token}"
+    activity_logger.add("SHARE", f"Created share link for {file_data['file_name']}", level="success")
+    return {
+        "status": "success",
+        "token": token,
+        "share_url": share_url,
+        "expires_at": expires_at,
+        "is_protected": bool(req.password)
+    }
+
+@app.get("/api/shares")
+async def api_list_shares():
+    return {"shares": await list_shares()}
+
+@app.delete("/api/share/{token}")
+async def api_revoke_share(token: str):
+    revoked = await revoke_share(token)
+    if not revoked:
+        raise HTTPException(status_code=404, detail="Share link not found.")
+    activity_logger.add("SHARE", f"Revoked share link {token[:8]}...")
+    return {"status": "success", "revoked": True}
 
 @app.post("/file/{file_id}/rename")
 async def rename_file(file_id: str, new_name: str = Query(...)):
