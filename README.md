@@ -145,38 +145,75 @@ Switch anytime in **Settings → Language**.
 
 ## 📥 Download & Install
 
-### 🪟 Windows (Pre-built Binaries)
+### 🪟 Windows (10 & 11)
 
-> **➡️ [Go to Releases →](https://github.com/aziqi/InfiniDrive/releases/latest)**
+> **➡️ [Download Latest Release (v1.1.0) →](https://github.com/aziqi/InfiniDrive/releases/tag/v1.1.0)**
 
-| Package | Description | Recommended |
-|---|---|---|
-| `InfiniDrive Setup 1.0.0.exe` | Windows NSIS Installer — creates Desktop & Start Menu shortcuts | ✅ **Most users** |
-| `InfiniDrive-Portable-1.0.0.exe` | Single-file portable — run from anywhere, no install needed | ✅ USB / portable use |
-| `InfiniDrive-1.0.0-win.zip` | ZIP archive — extract folder and run `InfiniDrive.exe` directly | Advanced |
+| Package Format | File Name | Description | Direct Download |
+| :--- | :--- | :--- | :--- |
+| **Setup Installer (NSIS)** | `InfiniDrive-Setup-1.1.0.exe` | Standard Windows installer. Creates Desktop & Start Menu shortcuts. | [⬇️ Download Installer](https://github.com/aziqi/InfiniDrive/releases/download/v1.1.0/InfiniDrive-Setup-1.1.0.exe) |
+| **Portable Executable** | `InfiniDrive-Portable-1.1.0.exe` | Single-file portable executable. Run immediately without installation. | [⬇️ Download Portable](https://github.com/aziqi/InfiniDrive/releases/download/v1.1.0/InfiniDrive-Portable-1.1.0.exe) |
+| **ZIP Archive** | `InfiniDrive-1.1.0-win.zip` | Standalone portable folder. Extract and launch `InfiniDrive.exe`. | [⬇️ Download ZIP](https://github.com/aziqi/InfiniDrive/releases/download/v1.1.0/InfiniDrive-1.1.0-win.zip) |
+
+#### Windows Quick Installation:
+1. Download `InfiniDrive-Setup-1.1.0.exe` or `InfiniDrive-Portable-1.1.0.exe`.
+2. Run the executable. If Windows SmartScreen prompts, click **More info** → **Run anyway**.
+3. Follow the Setup Wizard to connect your Telegram Bot or MTProto Account!
 
 ---
 
-### 🐧 Linux & Arch Linux (1-Line Quick Install)
+### 🏹 Arch Linux / Manjaro / EndeavourOS / CachyOS
 
-Install and configure InfiniDrive with a **single command** (auto-installs dependencies, builds UI, creates Desktop icon & CLI command `infinidrive`):
+InfiniDrive provides **3 convenient ways** to install on Arch Linux:
 
+#### Option 1: Native Pacman Direct Install (Fastest — Recommended)
+Install the prebuilt `.pacman` package directly from GitHub Releases with a single command:
+```bash
+sudo pacman -U https://github.com/aziqi/InfiniDrive/releases/download/v1.1.0/infinidrive-desktop-1.1.0.pacman
+```
+
+#### Option 2: 1-Line Universal Installer (Auto-Setup & Dependencies)
+Automatically detects your system, resolves all required dependencies, builds, and creates the Desktop launcher and `infinidrive` CLI command:
 ```bash
 curl -sSL https://raw.githubusercontent.com/aziqi/InfiniDrive/main/install.sh | bash
 ```
 
-> Works seamlessly on **Arch Linux (Pacman / AUR)**, **Ubuntu / Debian**, **Fedora**, and **openSUSE**.
-
-#### 🚀 How to Launch on Linux:
-- **Application Menu**: Search for `InfiniDrive` in Rofi / Wofi / KDE Application Launcher / GNOME Dash.
-- **Terminal CLI**: Run `infinidrive` anywhere.
-
-#### 📦 Arch Linux PKGBUILD (Optional Native Build):
+#### Option 3: Native PKGBUILD Build (`makepkg`)
+Build and install cleanly using the official Arch Linux packaging system:
 ```bash
 git clone https://github.com/aziqi/InfiniDrive.git
 cd InfiniDrive/pkg/arch
 makepkg -si
 ```
+
+---
+
+### 🐧 Debian / Ubuntu / Linux Mint / Pop!_OS
+
+Install the native `.deb` package via terminal:
+
+```bash
+wget https://github.com/aziqi/InfiniDrive/releases/download/v1.1.0/infinidrive-desktop_1.1.0_amd64.deb
+sudo apt install ./infinidrive-desktop_1.1.0_amd64.deb
+```
+
+---
+
+### 📦 Universal Linux AppImage (All Distributions)
+
+Run InfiniDrive on any Linux distro without installing:
+
+```bash
+curl -LO https://github.com/aziqi/InfiniDrive/releases/download/v1.1.0/InfiniDrive-1.1.0.AppImage
+chmod +x InfiniDrive-1.1.0.AppImage
+./InfiniDrive-1.1.0.AppImage
+```
+
+---
+
+### 🚀 How to Launch on Linux:
+- **Application Menu**: Search for **InfiniDrive** in Rofi, Wofi, KDE Application Launcher, or GNOME App Grid.
+- **Terminal**: Run `infinidrive` anywhere.
 
 ---
 
