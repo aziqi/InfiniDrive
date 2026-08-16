@@ -14,9 +14,9 @@ export const en = {
   // TitleBar
   cluster_bots: 'Cluster {count} bot{plural}',
   initializing_engine: 'Initializing engine...',
-  hybrid_turbo_active: 'Hybrid Turbo Active Â· 12-Worker Parallel MTProto + Bot Cluster',
-  personal_mtproto_mode: 'Personal MTProto Mode Â· 4GB - 100GB Direct',
-  bot_cluster_mode: 'Bot Cluster Mode Â· Multi-Stream',
+  hybrid_turbo_active: 'Hybrid Turbo Active • 12-Worker Parallel MTProto + Bot Cluster',
+  personal_mtproto_mode: 'Personal MTProto Mode • 4GB - 100GB Direct',
+  bot_cluster_mode: 'Bot Cluster Mode • Multi-Stream',
 
   // Dashboard
   dash_welcome_title: 'InfiniDrive Dashboard',
@@ -171,7 +171,7 @@ export const en = {
   set_dual_engine_title: 'Smart Dual-Engine Routing',
   set_dual_engine_badge: 'Traffic Optimization',
   set_mode_smart: 'Smart Hybrid (Auto Route)',
-  set_mode_smart_desc: 'Files â¤ {mb}MB via Bots, > {mb}MB via MTProto Personal Userbot (Max Speed).',
+  set_mode_smart_desc: 'Files <= {mb}MB via Bots, > {mb}MB via MTProto Personal Userbot (Max Speed).',
   set_mode_personal: 'Personal Account Only',
   set_mode_personal_desc: 'Direct MTProto protocol only (Up to 100GB single file upload).',
   set_mode_bot: 'Bot Cluster Only',
