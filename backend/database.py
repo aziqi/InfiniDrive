@@ -1,5 +1,6 @@
 # InfiniDrive Async SQLite Database  stores file metadata, folders, and folder locks
 import aiosqlite
+import json
 import logging
 import hashlib
 from typing import List, Optional, Dict, Any
@@ -78,6 +79,15 @@ async def init_db():
                 access_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(file_id) REFERENCES files(file_id) ON DELETE CASCADE
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS folder_groups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                color TEXT DEFAULT '#3b82f6',
+                folder_paths TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_shares_token ON shares(token);")
@@ -533,4 +543,85 @@ async def list_locked_folders_db() -> List[str]:
             rows = await cursor.fetchall()
             return [r[0] for r in rows]
 
+# ---------------------------------------------------------------------------
+# Folder Groups (Phase 7) - user-defined collections of folder paths
+# ---------------------------------------------------------------------------
 
+def _normalize_group_path(path: str) -> str:
+    clean = (path or "").strip()
+    if not clean:
+        return "/"
+    if not clean.startswith("/"):
+        clean = f"/{clean}"
+    while "//" in clean:
+        clean = clean.replace("//", "/")
+    if clean.endswith("/") and len(clean) > 1:
+        clean = clean[:-1]
+    return clean
+
+
+def _decode_group_row(row: Any) -> Dict[str, Any]:
+    data = dict(row)
+    raw_paths = data.get("folder_paths") or "[]"
+    paths: List[str] = []
+    try:
+        parsed = json.loads(raw_paths)
+        if isinstance(parsed, list):
+            paths = [str(p) for p in parsed if str(p).strip()]
+    except Exception:
+        paths = []
+    data["folder_paths"] = paths
+    return data
+
+
+async def create_folder_group(name: str, color: str = "#3b82f6", folder_paths: Optional[List[str]] = None) -> Dict[str, Any]:
+    clean_name = (name or "").strip() or "Untitled Group"
+    clean_color = (color or "").strip() or "#3b82f6"
+    seen: List[str] = []
+    for p in (folder_paths or []):
+        norm = _normalize_group_path(str(p))
+        if norm not in seen:
+            seen.append(norm)
+    payload = json.dumps(seen)
+
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        cursor = await db.execute(
+            "INSERT INTO folder_groups (name, color, folder_paths) VALUES (?, ?, ?)",
+            (clean_name, clean_color, payload)
+        )
+        await db.commit()
+        new_id = cursor.lastrowid
+
+    return {
+        "id": new_id,
+        "name": clean_name,
+        "color": clean_color,
+        "folder_paths": seen
+    }
+
+
+async def list_folder_groups() -> List[Dict[str, Any]]:
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        try:
+            async with db.execute("SELECT * FROM folder_groups ORDER BY created_at ASC, id ASC") as cursor:
+                rows = await cursor.fetchall()
+                return [_decode_group_row(r) for r in rows]
+        except Exception as e:
+            logger.warning(f"Failed to list folder groups: {e}")
+            return []
+
+
+async def get_folder_group(group_id: int) -> Optional[Dict[str, Any]]:
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM folder_groups WHERE id = ?", (group_id,)) as cursor:
+            row = await cursor.fetchone()
+            return _decode_group_row(row) if row else None
+
+
+async def delete_folder_group(group_id: int) -> bool:
+    async with aiosqlite.connect(DATABASE_FILE) as db:
+        cursor = await db.execute("DELETE FROM folder_groups WHERE id = ?", (group_id,))
+        await db.commit()
+        return cursor.rowcount > 0

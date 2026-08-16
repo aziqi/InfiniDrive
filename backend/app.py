@@ -25,10 +25,13 @@ try:
         add_file_chunk, get_file_chunks,
         get_file_thumbnail, get_incomplete_chunks,
         lock_folder_db, unlock_folder_db, verify_folder_password_db, list_locked_folders_db,
-        create_share, get_share_by_token, list_shares, revoke_share, increment_share_access
+        create_share, get_share_by_token, list_shares, revoke_share, increment_share_access,
+        hash_password,
+        create_folder_group, list_folder_groups, get_folder_group, delete_folder_group
     )
     from bot_cluster import cluster, generate_video_poster, extract_video_thumbnail
     from telegram_user import user_manager
+    from bandwidth import bandwidth_manager
 except ImportError:
     from .config import config_mgr, AppConfig
     from .database import (
@@ -39,10 +42,13 @@ except ImportError:
         add_file_chunk, get_file_chunks,
         get_file_thumbnail, get_incomplete_chunks,
         lock_folder_db, unlock_folder_db, verify_folder_password_db, list_locked_folders_db,
-        create_share, get_share_by_token, list_shares, revoke_share, increment_share_access
+        create_share, get_share_by_token, list_shares, revoke_share, increment_share_access,
+        hash_password,
+        create_folder_group, list_folder_groups, get_folder_group, delete_folder_group
     )
     from .bot_cluster import cluster, generate_video_poster, extract_video_thumbnail
     from .telegram_user import user_manager
+    from .bandwidth import bandwidth_manager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("infinidrive.api")
@@ -162,6 +168,7 @@ class SetupConfigRequest(BaseModel):
     user_chunk_mb: Optional[int] = None
     throttle_delay_sec: Optional[float] = None
     max_parallel_bot_uploads: Optional[int] = None
+    bandwidth_limit_gb: Optional[float] = None
 
 class AddBotRequest(BaseModel):
     token: str
@@ -284,6 +291,12 @@ async def save_config(req: SetupConfigRequest):
         update_data["throttle_delay_sec"] = req.throttle_delay_sec
     if req.max_parallel_bot_uploads is not None:
         update_data["max_parallel_bot_uploads"] = req.max_parallel_bot_uploads
+    if req.bandwidth_limit_gb is not None:
+        try:
+            limit_gb = float(req.bandwidth_limit_gb)
+        except (TypeError, ValueError):
+            limit_gb = 250.0
+        update_data["bandwidth_limit_gb"] = limit_gb if limit_gb > 0 else 250.0
 
     config_mgr.update(**update_data)
     cluster.reload_from_config()
@@ -346,6 +359,11 @@ async def api_stats():
         stats["user_profile"] = None
         stats["upload_limit_gb"] = 2.0
     return stats
+
+@app.get("/api/bandwidth")
+async def api_get_bandwidth():
+    """Daily bandwidth quota usage (upload + download) for the current calendar day."""
+    return bandwidth_manager.get_stats()
 
 class BulkDeleteRequest(BaseModel):
     file_ids: List[str]
@@ -466,6 +484,36 @@ async def api_verify_folder_password(req: VerifyFolderRequest):
         raise HTTPException(status_code=401, detail="Invalid folder password.")
     return {"status": "success", "valid": True}
 
+class FolderGroupCreateRequest(BaseModel):
+    name: str
+    color: Optional[str] = None
+    folder_paths: Optional[List[str]] = None
+
+@app.get("/api/folder-groups")
+async def api_list_folder_groups():
+    return {"groups": await list_folder_groups()}
+
+@app.post("/api/folder-groups")
+async def api_create_folder_group(req: FolderGroupCreateRequest):
+    if not (req.name or "").strip():
+        raise HTTPException(status_code=400, detail="Group name is required.")
+    group = await create_folder_group(
+        name=req.name,
+        color=req.color or "#3b82f6",
+        folder_paths=req.folder_paths or []
+    )
+    activity_logger.add("GROUP", f"Created folder group '{group['name']}' with {len(group['folder_paths'])} folder(s).")
+    return {"status": "success", "group": group}
+
+@app.delete("/api/folder-groups/{group_id}")
+async def api_delete_folder_group(group_id: int):
+    existing = await get_folder_group(group_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Folder group not found.")
+    deleted = await delete_folder_group(group_id)
+    activity_logger.add("GROUP", f"Deleted folder group '{existing.get('name')}'.")
+    return {"status": "success", "deleted": deleted, "id": group_id}
+
 @app.get("/thumbnail/{file_id}")
 async def api_get_thumbnail(file_id: str):
     thumb = await get_file_thumbnail(file_id)
@@ -503,6 +551,18 @@ async def upload_file(
 
         file_size = await asyncio.to_thread(copy_stream)
         size_label = format_file_size(file_size)
+
+        # Bandwidth Manager gate (Phase 6): refuse the transfer when today's quota is exhausted.
+        if not bandwidth_manager.can_transfer(file_size):
+            bw = bandwidth_manager.get_stats()
+            activity_logger.add(
+                "BANDWIDTH",
+                f"[{file.filename}] Upload blocked: daily bandwidth quota exceeded "
+                f"({format_file_size(bw['used_today_bytes'])} / {format_file_size(bw['quota_bytes'])}).",
+                level="error"
+            )
+            raise HTTPException(status_code=429, detail="Daily bandwidth quota exceeded.")
+
         activity_logger.add("START", f"[{file.filename}] Initializing upload ({size_label})...")
         
         # Check if video or audio
@@ -599,6 +659,7 @@ async def upload_file(
                     has_thumbnail=has_thumbnail,
                     thumbnail_blob=thumbnail_blob
                 )
+                bandwidth_manager.add_bytes(file_size)
                 activity_logger.add("SUCCESS", f"[{file.filename}] Successfully uploaded to Telegram Cloud via MTProto!", level="success")
 
                 return {
@@ -655,6 +716,7 @@ async def upload_file(
                 )
                 tracker.update(file_size, force=True)
 
+                bandwidth_manager.add_bytes(file_size)
                 activity_logger.add("SUCCESS", f"[{file.filename}] All {total_chunks} parts uploaded & assembled via MTProto!", level="success")
 
                 return {
@@ -709,6 +771,7 @@ async def upload_file(
                     has_thumbnail=has_thumbnail,
                     thumbnail_blob=thumbnail_blob
                 )
+                bandwidth_manager.add_bytes(file_size)
                 activity_logger.add("SUCCESS", f"[{file.filename}] Upload completed via Bot Cluster!", level="success")
 
                 return {
@@ -807,6 +870,7 @@ async def upload_file(
 
                 await asyncio.gather(*[upload_single_bot_chunk(i) for i in range(total_chunks)])
                 tracker.update(file_size, force=True)
+                bandwidth_manager.add_bytes(uploaded_bytes_total or file_size)
                 activity_logger.add("SUCCESS", f"[{file.filename}] All {total_chunks} parts stored via Bot Cluster!", level="success")
 
                 return {
@@ -821,6 +885,8 @@ async def upload_file(
                     "share_link": f"{cfg.base_url}/share/{share_token}"
                 }
 
+    except HTTPException:
+        raise
     except Exception as e:
         activity_logger.add("ERROR", f"[{file.filename}] Upload failed: {e}", level="error")
         logger.error(f"Upload error for {file.filename}: {e}", exc_info=True)
@@ -831,6 +897,21 @@ async def upload_file(
                 os.remove(temp_path)
             except Exception:
                 pass
+
+async def _metered_stream(source):
+    """Wrap a byte-chunk async generator and record served bytes into the Bandwidth Manager."""
+    served = 0
+    try:
+        async for chunk in source:
+            if chunk:
+                served += len(chunk)
+            yield chunk
+    finally:
+        if served > 0:
+            try:
+                bandwidth_manager.add_bytes(served)
+            except Exception as e:
+                logger.warning(f"Failed to record download bandwidth: {e}")
 
 async def stream_telegram_file(file_data: dict, filename: str, request: Request):
     await increment_view_count(file_data["file_id"])
@@ -868,6 +949,18 @@ async def stream_telegram_file(file_data: dict, filename: str, request: Request)
             status_code = 206
 
     content_length = end_byte - start_byte + 1
+
+    # Bandwidth Manager gate (Phase 6): block downloads once today's quota is exhausted.
+    if not bandwidth_manager.can_transfer(content_length):
+        bw = bandwidth_manager.get_stats()
+        activity_logger.add(
+            "BANDWIDTH",
+            f"[{filename}] Download blocked: daily bandwidth quota exceeded "
+            f"({format_file_size(bw['used_today_bytes'])} / {format_file_size(bw['quota_bytes'])}).",
+            level="error"
+        )
+        raise HTTPException(status_code=429, detail="Daily bandwidth quota exceeded.")
+
     proxy = config_mgr.config.proxy_url
 
     if upload_source == "user_account" and user_manager.is_connected:
@@ -891,7 +984,7 @@ async def stream_telegram_file(file_data: dict, filename: str, request: Request)
             }
             if status_code == 206:
                 headers["Content-Range"] = f"bytes {start_byte}-{end_byte}/{file_size}"
-            return StreamingResponse(stream_user_single(), status_code=status_code, headers=headers)
+            return StreamingResponse(_metered_stream(stream_user_single()), status_code=status_code, headers=headers)
         else:
             # Multi-part chunked MTProto stream
             chunks = await get_file_chunks(file_data["file_id"])
@@ -939,7 +1032,7 @@ async def stream_telegram_file(file_data: dict, filename: str, request: Request)
             }
             if status_code == 206:
                 headers["Content-Range"] = f"bytes {start_byte}-{end_byte}/{file_size}"
-            return StreamingResponse(stream_user_multi(), status_code=status_code, headers=headers)
+            return StreamingResponse(_metered_stream(stream_user_multi()), status_code=status_code, headers=headers)
 
     # Fallback to Bot API HTTP Streaming
     if not is_chunked:
@@ -967,7 +1060,7 @@ async def stream_telegram_file(file_data: dict, filename: str, request: Request)
         if status_code == 206:
             headers["Content-Range"] = f"bytes {start_byte}-{end_byte}/{file_size}"
 
-        return StreamingResponse(stream_chunks(), status_code=status_code, headers=headers)
+        return StreamingResponse(_metered_stream(stream_chunks()), status_code=status_code, headers=headers)
     else:
         # Dynamic Range-aware Multi-Chunk Streaming Generator for Bot
         chunks = await get_file_chunks(file_data["file_id"])
@@ -1023,7 +1116,7 @@ async def stream_telegram_file(file_data: dict, filename: str, request: Request)
         if status_code == 206:
             headers["Content-Range"] = f"bytes {start_byte}-{end_byte}/{file_size}"
 
-        return StreamingResponse(stream_multi_chunks(), status_code=status_code, headers=headers)
+        return StreamingResponse(_metered_stream(stream_multi_chunks()), status_code=status_code, headers=headers)
 
 @app.get("/thumbnail/{file_id}")
 async def get_thumbnail_route(file_id: str):

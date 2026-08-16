@@ -74,6 +74,9 @@ class AppConfig(BaseModel):
     throttle_delay_sec: float = 1.0
     max_parallel_bot_uploads: int = 4
 
+    # Bandwidth Manager (Phase 6) - daily transfer quota in gigabytes
+    bandwidth_limit_gb: float = 250.0
+
 class ConfigManager:
     def __init__(self, config_path: Path = CONFIG_FILE):
         self.config_path = config_path
