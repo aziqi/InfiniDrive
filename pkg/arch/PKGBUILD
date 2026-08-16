@@ -1,0 +1,61 @@
+# Maintainer: aziqi <aziqi@users.noreply.github.com>
+pkgname=infinidrive-git
+pkgver=1.0.0.r0
+pkgrel=1
+pkgdesc="High-Performance Infinite Telegram Cloud Storage Desktop App"
+arch=('x86_64')
+url="https://github.com/aziqi/InfiniDrive"
+license=('MIT')
+depends=('nodejs' 'python' 'python-pip' 'electron')
+makedepends=('git' 'npm')
+provides=('infinidrive')
+conflicts=('infinidrive')
+source=('git+https://github.com/aziqi/InfiniDrive.git')
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$srcdir/InfiniDrive"
+  printf "1.0.0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd "$srcdir/InfiniDrive/backend"
+  python -m venv venv
+  ./venv/bin/pip install --upgrade pip
+  ./venv/bin/pip install -r requirements.txt
+
+  cd "$srcdir/InfiniDrive/app"
+  npm install
+  npm run build
+}
+
+package() {
+  cd "$srcdir/InfiniDrive"
+  
+  install -d "$pkgdir/opt/infinidrive"
+  cp -r * "$pkgdir/opt/infinidrive/"
+  
+  install -d "$pkgdir/usr/bin"
+  cat << 'EOF' > "$pkgdir/usr/bin/infinidrive"
+#!/usr/bin/env bash
+cd /opt/infinidrive/app
+export NODE_ENV=production
+electron electron/main.cjs "$@"
+EOF
+  chmod +x "$pkgdir/usr/bin/infinidrive"
+
+  install -d "$pkgdir/usr/share/applications"
+  cat << 'EOF' > "$pkgdir/usr/share/applications/infinidrive.desktop"
+[Desktop Entry]
+Name=InfiniDrive
+Comment=Infinite Telegram Cloud Storage Desktop App
+Exec=infinidrive
+Icon=/opt/infinidrive/assets/logo.png
+Terminal=false
+Type=Application
+Categories=Utility;Network;FileTransfer;
+StartupWMClass=InfiniDrive
+EOF
+
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE" 2>/dev/null || true
+}
