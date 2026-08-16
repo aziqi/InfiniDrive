@@ -218,6 +218,17 @@ InfiniDrive/
 
 ---
 
+## 💖 Acknowledgements & Upstream Projects
+
+InfiniDrive is evolved, modernized, and built upon the foundational architecture and inspiration from:
+
+- 🌟 **[TGstorage](https://github.com/DraxonV1/TGstorage)** by [@DraxonV1](https://github.com/DraxonV1) — Core concepts and Telegram storage mechanics.
+- 🌟 **[Telegram-Drive](https://github.com/caamer20/Telegram-Drive)** by [@caamer20](https://github.com/caamer20) — Telegram drive interface and file stream inspiration.
+
+Special thanks to the creators and open-source contributors of these projects!
+
+---
+
 ## 🛡️ License
 
 MIT License — Copyright © 2026 [aziqi](https://github.com/aziqi)
