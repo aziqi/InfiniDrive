@@ -1,3 +1,4 @@
+// InfiniDrive — Recursive directory scanner for Windows folder drag-and-drop uploads
 export interface ScannedFileItem {
   file: File;
   name: string;
