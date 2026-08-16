@@ -1,4 +1,4 @@
-# InfiniDrive MTProto Engine � 12-worker parallel Telethon uploader, recommended for files >= 20MB
+# InfiniDrive MTProto Engine  12-worker parallel Telethon uploader, recommended for files >= 20MB
 import os
 import io
 import re
@@ -416,7 +416,7 @@ class TelegramUserManager:
             msg = await self.client.send_file(
                 target_peer,
                 file_handle,
-                caption=f"📁 {filename}\n⚡ Engine: MTProto Turbo",
+                caption=f"ð {filename}\nâ¡ Engine: MTProto Turbo",
                 force_document=True,
                 attributes=[DocumentAttributeFilename(file_name=filename)]
             )
@@ -485,7 +485,7 @@ class TelegramUserManager:
                 chunk_data = await asyncio.to_thread(read_slice)
                 actual_chunk_size = len(chunk_data)
                 part_filename = f"{filename}.part{idx+1:04d}.tgpart"
-                caption = f"📦 {filename} (Part {idx+1}/{total_chunks})\n⚡ Engine: MTProto User Client"
+                caption = f"ð¦ {filename} (Part {idx+1}/{total_chunks})\nâ¡ Engine: MTProto User Client"
 
                 success = False
                 retries = 0

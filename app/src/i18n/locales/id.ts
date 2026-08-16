@@ -1,4 +1,4 @@
-// InfiniDrive � Paket terjemahan Bahasa Indonesia lengkap
+// InfiniDrive  Paket terjemahan Bahasa Indonesia lengkap
 import { TranslationKey } from './en';
 
 export const id: Record<TranslationKey, string> = {
@@ -16,9 +16,9 @@ export const id: Record<TranslationKey, string> = {
   // TitleBar
   cluster_bots: 'Klaster {count} bot',
   initializing_engine: 'Menginisialisasi mesin...',
-  hybrid_turbo_active: 'Turbo Hibrida Aktif · 12-Pekerja Paralel MTProto + Klaster Bot',
-  personal_mtproto_mode: 'Mode Akun Pribadi MTProto · 4GB - 100GB Langsung',
-  bot_cluster_mode: 'Mode Klaster Bot · Aliran Ganda',
+  hybrid_turbo_active: 'Turbo Hibrida Aktif Â· 12-Pekerja Paralel MTProto + Klaster Bot',
+  personal_mtproto_mode: 'Mode Akun Pribadi MTProto Â· 4GB - 100GB Langsung',
+  bot_cluster_mode: 'Mode Klaster Bot Â· Aliran Ganda',
 
   // Dashboard
   dash_welcome_title: 'Dasbor InfiniDrive',
@@ -172,7 +172,7 @@ export const id: Record<TranslationKey, string> = {
   set_dual_engine_title: 'Perutean Cerdas Mesin Ganda',
   set_dual_engine_badge: 'Optimalisasi Lalu Lintas',
   set_mode_smart: 'Hibrida Cerdas (Otomatis)',
-  set_mode_smart_desc: 'Berkas ≤ {mb}MB via Bot, > {mb}MB via Userbot Pribadi MTProto (Kecepatan Maksimal).',
+  set_mode_smart_desc: 'Berkas â¤ {mb}MB via Bot, > {mb}MB via Userbot Pribadi MTProto (Kecepatan Maksimal).',
   set_mode_personal: 'Hanya Akun Pribadi',
   set_mode_personal_desc: 'Hanya menggunakan protokol MTProto langsung (Unggah hingga 100GB per berkas tunggal).',
   set_mode_bot: 'Hanya Klaster Bot',

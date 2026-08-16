@@ -1,4 +1,4 @@
-// InfiniDrive — Bot cluster manager: add, remove, and test bots
+// InfiniDrive Â— Bot cluster manager: add, remove, and test bots
 import React, { useState } from 'react';
 import { 
   Cpu, 

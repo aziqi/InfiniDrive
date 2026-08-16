@@ -1,4 +1,4 @@
-// InfiniDrive � File Manager: grid/list view, multi-select, folder context menu
+// InfiniDrive  File Manager: grid/list view, multi-select, folder context menu
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -1104,7 +1104,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
                     {file.upload_source === 'user_account' && (
                       <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-[9px] font-bold text-purple-300">
-                        👤 MTProto
+                        ð¤ MTProto
                       </span>
                     )}
                   </div>
@@ -1183,11 +1183,11 @@ export const FileManager: React.FC<FileManagerProps> = ({
                       </span>
                       {file.upload_source === 'user_account' ? (
                         <span className="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-mono shrink-0">
-                          👤 MTProto
+                          ð¤ MTProto
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[9px] font-mono shrink-0">
-                          🤖 Bot
+                          ð¤ Bot
                         </span>
                       )}
                       {Boolean(file.is_chunked) && (

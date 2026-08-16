@@ -1,4 +1,4 @@
-// InfiniDrive — Root App component: routing, drag-drop, modal orchestration
+// InfiniDrive Â— Root App component: routing, drag-drop, modal orchestration
 import React, { useState, useEffect, useCallback } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { Sidebar } from './components/Sidebar';

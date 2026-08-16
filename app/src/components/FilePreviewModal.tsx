@@ -1,4 +1,4 @@
-// InfiniDrive � In-app file preview for images, video, audio, PDF, and text
+// InfiniDrive  In-app file preview for images, video, audio, PDF, and text
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
@@ -110,7 +110,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 {file.file_name}
               </h3>
               <p className="text-xs text-slate-400">
-                {formatBytes(file.file_size)} · {file.mime_type}
+                {formatBytes(file.file_size)} Â· {file.mime_type}
               </p>
             </div>
           </div>
@@ -251,11 +251,11 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               Engine: 
               {file.upload_source === 'user_account' ? (
                 <span className="text-purple-300 font-medium flex items-center gap-1">
-                  👤 MTProto ({file.bot_uploader || 'Account'})
+                  ð¤ MTProto ({file.bot_uploader || 'Account'})
                 </span>
               ) : (
                 <span className="text-blue-300 font-mono flex items-center gap-1">
-                  🤖 Bot (@{file.bot_uploader || 'Cluster'})
+                  ð¤ Bot (@{file.bot_uploader || 'Cluster'})
                 </span>
               )}
             </span>

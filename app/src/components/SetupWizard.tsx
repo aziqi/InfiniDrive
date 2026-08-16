@@ -1,4 +1,4 @@
-// InfiniDrive � First-time setup wizard with bot token and channel ID configuration
+// InfiniDrive  First-time setup wizard with bot token and channel ID configuration
 import React, { useState } from 'react';
 import { 
   Bot, 
@@ -264,7 +264,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onToast })
                         {userProfile.username && <span className="text-slate-400 font-mono">(@{userProfile.username})</span>}
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {userProfile.phone} · Limit: <strong className="text-purple-300">{userProfile.upload_limit_gb} GB</strong>/file
+                        {userProfile.phone} Â· Limit: <strong className="text-purple-300">{userProfile.upload_limit_gb} GB</strong>/file
                       </div>
                     </div>
                   </div>

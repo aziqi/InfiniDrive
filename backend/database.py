@@ -1,4 +1,4 @@
-# InfiniDrive Async SQLite Database — stores file metadata, folders, and folder locks
+# InfiniDrive Async SQLite Database Â— stores file metadata, folders, and folder locks
 import aiosqlite
 import logging
 import hashlib

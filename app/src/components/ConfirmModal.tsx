@@ -1,4 +1,4 @@
-// InfiniDrive — Dark glassmorphic confirmation modal for destructive actions
+// InfiniDrive Â— Dark glassmorphic confirmation modal for destructive actions
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 

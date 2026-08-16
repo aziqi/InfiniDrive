@@ -1,4 +1,4 @@
-# InfiniDrive FastAPI Backend � upload, download, streaming, folder management endpoints
+# InfiniDrive FastAPI Backend  upload, download, streaming, folder management endpoints
 import os
 import re
 import math
@@ -129,7 +129,7 @@ class SpeedTracker:
         else:
             eta_str = "--"
 
-        msg = f"[{self.filename}] {cur_mb:.1f} MB / {tot_mb:.1f} MB ({pct}%) — ⚡ {speed_mb:.2f} MB/s (Peak: {peak_mb:.2f} MB/s) — ETA {eta_str}"
+        msg = f"[{self.filename}] {cur_mb:.1f} MB / {tot_mb:.1f} MB ({pct}%) â â¡ {speed_mb:.2f} MB/s (Peak: {peak_mb:.2f} MB/s) â ETA {eta_str}"
         activity_logger.add("PROGRESS", msg)
 
 app = FastAPI(title="InfiniDrive Desktop Backend", version="2.0.0")
@@ -547,7 +547,7 @@ async def upload_file(
             else:
                 use_user_account = False
 
-        engine_name = "👤 MTProto Personal Account" if use_user_account else "🤖 Multi-Bot Cluster"
+        engine_name = "ð¤ MTProto Personal Account" if use_user_account else "ð¤ Multi-Bot Cluster"
         activity_logger.add("ROUTE", f"[{file.filename}] Routed to {engine_name} (Size: {size_label}, Mode: {auth_mode})")
 
         if use_user_account:

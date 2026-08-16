@@ -1,4 +1,4 @@
-// InfiniDrive � Turbo Upload Modal with live speedometer and minimizable floating dock
+// InfiniDrive  Turbo Upload Modal with live speedometer and minimizable floating dock
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -101,7 +101,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 const targetFileName = fileMatch[1];
                 const rest = fileMatch[2];
 
-                const speedMatch = rest.match(/⚡\s*([0-9.]+)\s*MB\/s/i);
+                const speedMatch = rest.match(/â¡\s*([0-9.]+)\s*MB\/s/i);
                 if (speedMatch) {
                   const sVal = parseFloat(speedMatch[1]);
                   setCurrentSpeedNum(sVal);
@@ -287,7 +287,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         // Windows Native Notification
         if (window.electronAPI?.showNotification) {
           window.electronAPI.showNotification({
-            title: 'InfiniDrive — Upload Complete',
+            title: 'InfiniDrive â Upload Complete',
             body: `"${item.name}" (${formatBytes(item.size)}) saved to Telegram Cloud.`
           });
         }
@@ -299,7 +299,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         if (window.electronAPI?.showNotification) {
           window.electronAPI.showNotification({
-            title: 'InfiniDrive — Upload Notice',
+            title: 'InfiniDrive â Upload Notice',
             body: `Failed to upload "${item.name}": ${errMsg}`
           });
         }
@@ -358,10 +358,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
                   <span>{completedCount}/{queue.length} files</span>
                   {isUploading && (
-                    <span className="text-blue-400 font-semibold">• {currentSpeedStr}</span>
+                    <span className="text-blue-400 font-semibold">â¢ {currentSpeedStr}</span>
                   )}
                   {currentEtaStr !== '--' && isUploading && (
-                    <span className="text-purple-300 font-semibold">• {currentEtaStr}</span>
+                    <span className="text-purple-300 font-semibold">â¢ {currentEtaStr}</span>
                   )}
                 </div>
               </div>
@@ -435,7 +435,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 InfiniDrive Turbo Transfer
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono font-semibold border border-blue-500/30">
-                  {appConfig?.auth_mode === 'personal_only' ? '⚡ MTProto Direct' : '🤖 Bot Cluster'}
+                  {appConfig?.auth_mode === 'personal_only' ? 'â¡ MTProto Direct' : 'ð¤ Bot Cluster'}
                 </span>
               </h3>
               <p className="text-[11px] text-slate-400">
@@ -513,7 +513,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 <div>
                   <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">Live Throughput</span>
                   <div className="text-xl font-black font-mono text-white tracking-tight text-gradient">
-                    ⚡ {currentSpeedStr}
+                    â¡ {currentSpeedStr}
                   </div>
                 </div>
               </div>

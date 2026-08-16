@@ -1,4 +1,4 @@
-// InfiniDrive — Custom draggable Windows 11 title bar with window controls
+// InfiniDrive Â— Custom draggable Windows 11 title bar with window controls
 import React, { useState, useEffect } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import logoImg from '../assets/logo.png';
