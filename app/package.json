@@ -1,0 +1,99 @@
+{
+  "name": "infinidrive-desktop",
+  "version": "1.0.0",
+  "description": "InfiniDrive — High-Performance Telegram Cloud Storage Desktop App for Windows 11",
+  "main": "electron/main.cjs",
+  "author": "Antigravity",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:dev": "vite build && electron electron/main.cjs",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "^2.1.7",
+    "axios": "^1.7.7",
+    "clsx": "^2.1.1",
+    "framer-motion": "^11.11.17",
+    "lucide-react": "^1.31.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "terser": "^5.50.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vite-plugin-compression": "^0.5.1"
+  },
+  "build": {
+    "appId": "com.infinidrive.desktop",
+    "productName": "InfiniDrive",
+    "compression": "normal",
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "electronLanguages": [
+      "en-US",
+      "id"
+    ],
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/*.ts",
+      "!**/*.tsx",
+      "!**/README*",
+      "!**/CHANGELOG*",
+      "!**/*.md",
+      "!**/test/**",
+      "!**/__tests__/**",
+      "!**/coverage/**"
+    ],
+    "extraResources": [
+      {
+        "from": "../resources/bin",
+        "to": "bin",
+        "filter": [
+          "infinidrive_backend.exe"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "electron/icon.ico",
+      "target": [
+        "nsis",
+        "portable",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "InfiniDrive",
+      "differentialPackage": true
+    },
+    "portable": {
+      "artifactName": "InfiniDrive-Portable-${version}.${ext}",
+      "requestExecutionLevel": "user",
+      "unpackDirName": "InfiniDrivePortable"
+    }
+  }
+}
