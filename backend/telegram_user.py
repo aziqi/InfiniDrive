@@ -1,3 +1,4 @@
+# InfiniDrive MTProto Engine — 12-worker parallel Telethon uploader, recommended for files >= 20MB
 import os
 import io
 import re
