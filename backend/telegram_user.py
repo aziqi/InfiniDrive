@@ -28,6 +28,62 @@ except ImportError:
 
 logger = logging.getLogger("infinidrive.mtproto")
 
+def parse_telethon_proxy(proxy_url):
+    """Build a Telethon proxy object from a proxy URL (Phase 8).
+
+    Supports socks5://[user:pass@]host:port, socks4://host:port,
+    http://host:port and mtproxy://secret@host:port.
+    Returns None on empty/unrecognized input or parse failure so a bad
+    secret or malformed URL never crashes engine startup.
+    """
+    if not proxy_url:
+        return None
+    try:
+        from urllib.parse import urlparse
+        try:
+            from telethon.proxy import Socks5Proxy, Socks4Proxy, HttpProxy, MTProxy
+        except ImportError:
+            from telethon.network.connection.proxy import Socks5Proxy, Socks4Proxy, HttpProxy, MTProxy
+    except Exception as e:
+        logger.warning(f"Telethon proxy module unavailable: {e}")
+        return None
+    try:
+        parsed = urlparse(proxy_url)
+        scheme = (parsed.scheme or "").lower()
+        host = parsed.hostname
+        port = parsed.port
+        if not scheme or not host or not port:
+            return None
+        if scheme == "socks5":
+            user = parsed.username
+            pwd = parsed.password
+            if user or pwd:
+                return Socks5Proxy(host, port, username=user, password=pwd)
+            return Socks5Proxy(host, port)
+        elif scheme == "socks4":
+            return Socks4Proxy(host, port)
+        elif scheme in ("http", "https"):
+            return HttpProxy(host, port)
+        elif scheme == "mtproxy":
+            secret = parsed.username
+            if not secret:
+                logger.warning("MTProto proxy URL missing secret; ignoring proxy.")
+                return None
+            try:
+                return MTProxy(host, port, secret)
+            except Exception as e:
+                logger.warning(f"Failed to build MTProto proxy (bad secret?): {e}")
+                return None
+        else:
+            logger.warning(f"Unsupported proxy scheme '{scheme}'; ignoring proxy.")
+            return None
+    except Exception as e:
+        logger.warning(f"Failed to parse proxy URL '{proxy_url}': {e}")
+        return None
+
+
+
+
 async def fast_upload_stream(
     client: TelegramClient,
     file_source: Any,
@@ -179,10 +235,12 @@ class TelegramUserManager:
                         pass
 
                 session = StringSession(config.session_string.strip())
+                proxy = parse_telethon_proxy(config.proxy_url)
                 self.client = TelegramClient(
                     session,
                     config.api_id,
                     config.api_hash.strip(),
+                    proxy=proxy,
                     device_model="TGDrive High-Speed",
                     system_version="Windows 11",
                     app_version="2.0.0",
@@ -230,10 +288,12 @@ class TelegramUserManager:
         if not clean_phone.startswith("+"):
             clean_phone = f"+{clean_phone}"
 
+        proxy = parse_telethon_proxy(config_mgr.config.proxy_url)
         temp_client = TelegramClient(
             StringSession(),
             api_id,
             api_hash.strip(),
+            proxy=proxy,
             device_model="TGDrive Desktop",
             system_version="Windows 11",
             app_version="2.0.0"

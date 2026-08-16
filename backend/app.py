@@ -242,6 +242,45 @@ async def api_user_logout():
 async def api_user_profile():
     return await user_manager.get_profile()
 
+@app.get("/api/connection")
+async def api_connection():
+    """Live connection-quality snapshot (Phase 8). Never raises 500."""
+    cfg = config_mgr.config
+    proxy_type = None
+    proxy_host = None
+    proxy_port = None
+    if cfg.proxy_url:
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(cfg.proxy_url)
+            if parsed.scheme:
+                proxy_type = parsed.scheme.lower()
+                proxy_host = parsed.hostname
+                proxy_port = parsed.port
+        except Exception:
+            pass
+
+    healthy = sum(1 for b in cluster.bots if b.is_healthy)
+    latency_ms = None
+    user_connected = user_manager.is_connected
+    if user_connected and user_manager.client is not None:
+        try:
+            import time as _t
+            start = _t.time()
+            await asyncio.wait_for(user_manager.client.get_me(), timeout=10)
+            latency_ms = round((_t.time() - start) * 1000, 1)
+        except Exception as e:
+            logger.warning(f"Latency probe failed: {e}")
+            latency_ms = None
+
+    return {
+        "user_connected": user_connected,
+        "proxy": {"type": proxy_type, "host": proxy_host, "port": proxy_port},
+        "bot_count": len(cluster.bots),
+        "healthy_bot_count": healthy,
+        "latency_ms": latency_ms
+    }
+
 @app.post("/api/sync/channel")
 async def sync_channel_files():
     cfg = config_mgr.config
