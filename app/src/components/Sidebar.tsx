@@ -1,3 +1,4 @@
+// InfiniDrive — Sidebar navigation with folder tree and storage stats
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
