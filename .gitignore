@@ -42,3 +42,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 .kilo/
+
+# Runtime user data (per-machine, never commit)
+config.json
+bandwidth.json
