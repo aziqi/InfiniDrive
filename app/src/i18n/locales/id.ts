@@ -259,4 +259,27 @@ export const id: Record<TranslationKey, string> = {
   share_revoked: 'Tautan bagikan dicabut.',
   share_revoke: 'Cabut Tautan',
   share_done: 'Selesai',
+
+  // Bandwidth Manager (Phase 6)
+  settings_bandwidth_title: 'Pengelola Bandwidth',
+  settings_bandwidth_label: 'Batas bandwidth harian (GB)',
+  settings_bandwidth_placeholder: 'contoh: 250',
+  settings_bandwidth_hint: 'Unggahan dan unduhan akan diblokir setelah kuota harian ini tercapai. Kuota disetel ulang setiap hari secara otomatis.',
+  dash_bandwidth_title: 'Bandwidth Harian',
+  dash_bandwidth_used: 'Bandwidth terpakai hari ini',
+  dash_bandwidth_remaining: 'sisa {remaining}',
+  bandwidth_exceeded: 'Kuota bandwidth harian telah habis.',
+
+  // Folder Groups (Phase 7)
+  sidebar_groups: 'Grup Folder',
+  sidebar_new_group: 'Grup Baru',
+  sidebar_group_name: 'Nama grup',
+  sidebar_group_add_current: 'Folder aktif ({folder}) akan ditambahkan ke grup ini.',
+  sidebar_group_empty: 'Belum ada folder di grup ini.',
+  sidebar_groups_empty: 'Belum ada grup folder. Buat grup untuk menata folder Anda.',
+  sidebar_delete_group: 'Hapus grup',
+  toast_group_created: 'Grup Dibuat',
+  toast_group_created_msg: 'Grup folder {name} berhasil dibuat.',
+  toast_group_deleted: 'Grup Dihapus',
+  toast_group_deleted_msg: 'Grup folder {name} telah dihapus.',
 };

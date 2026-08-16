@@ -4,7 +4,7 @@
 // (they need toast feedback) and simply invalidate these queries on success.
 import { useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { AppConfig, BotStatus, FileItem, FolderItem, StorageStats } from '../types';
+import type { AppConfig, BandwidthStats, BotStatus, FileItem, FolderGroup, FolderItem, StorageStats } from '../types';
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -14,6 +14,8 @@ export const queryKeys = {
   folders: ['folders'] as const,
   lockedFolders: ['lockedFolders'] as const,
   bots: ['bots'] as const,
+  bandwidth: ['bandwidth'] as const,
+  folderGroups: ['folderGroups'] as const,
 };
 
 export function useHealth() {
@@ -94,8 +96,31 @@ export function useBots(enabled: boolean) {
   });
 }
 
-/** Invalidate every cached query (used by pull-to-refresh / after mutations). */
-export function useRefreshAll() {
+/** Daily bandwidth quota usage (Phase 6). */
+export function useBandwidth(enabled: boolean = true) {
+  return useQuery({
+    queryKey: queryKeys.bandwidth,
+    queryFn: (): Promise<BandwidthStats> => api.getBandwidth(),
+    enabled,
+    staleTime: 4000,
+    refetchInterval: 10_000,
+  });
+}
+
+/** User-defined folder groups (Phase 7). */
+export function useFolderGroups(enabled: boolean = true) {
+  return useQuery({
+    queryKey: queryKeys.folderGroups,
+    queryFn: async (): Promise<FolderGroup[]> => {
+      const res = await api.listFolderGroups();
+      return res.groups ?? [];
+    },
+    enabled,
+    staleTime: 4000,
+  });
+}
+
+/** Invalidate every cached query (used by pull-to-refresh / after mutations). */export function useRefreshAll() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries();
 }

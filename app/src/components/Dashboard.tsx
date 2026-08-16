@@ -18,10 +18,12 @@ import {
   Lightning,
   ShieldCheck,
   Globe,
-  Sparkle
+  Sparkle,
+  Gauge
 } from '@phosphor-icons/react';
 import { FileItem, StorageStats, BotStatus } from '../types';
 import { useTranslation } from '../i18n/LanguageContext';
+import { useBandwidth } from '../hooks/queries';
 
 interface DashboardProps {
   stats: StorageStats | null;
@@ -43,6 +45,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onDownloadFile
 }) => {
   const { t } = useTranslation();
+  const bandwidthQuery = useBandwidth(true);
+  const bandwidth = bandwidthQuery.data ?? null;
 
   const formatBytes = (bytes: number) => {
     if (!bytes || bytes === 0) return '0 B';
@@ -145,6 +149,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
                 style={{ width: '100%', backgroundSize: '200% 200%' }}
               />
+            </div>
+          </div>
+
+          {/* Daily Bandwidth Usage Bar (Phase 6) */}
+          <div className="space-y-1.5 pt-1 border-t border-white/[0.05]">
+            <div className="flex justify-between items-center text-[11px]">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <Gauge weight="duotone" className="w-3.5 h-3.5 text-cyan-400" />
+                {t('dash_bandwidth_used')}
+              </span>
+              <span className="font-mono text-slate-300">
+                {formatBytes(bandwidth?.used_today_bytes || 0)} / {formatBytes(bandwidth?.quota_bytes || 0)}
+              </span>
+            </div>
+            <div className="w-full bg-white/[0.06] h-1.5 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  (bandwidth?.percent || 0) >= 100
+                    ? 'bg-gradient-to-r from-rose-500 to-red-500'
+                    : (bandwidth?.percent || 0) >= 80
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                }`}
+                style={{ width: `${Math.min(100, Math.max(0, bandwidth?.percent || 0))}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+              <span>{(bandwidth?.percent ?? 0).toFixed(1)}%</span>
+              <span>
+                {(bandwidth?.percent || 0) >= 100
+                  ? t('bandwidth_exceeded')
+                  : t('dash_bandwidth_remaining', { remaining: formatBytes(bandwidth?.remaining_bytes || 0) })}
+              </span>
             </div>
           </div>
 

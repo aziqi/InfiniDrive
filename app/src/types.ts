@@ -36,6 +36,22 @@ export interface FolderItem {
   name: string;
 }
 
+export interface FolderGroup {
+  id: number;
+  name: string;
+  color: string;
+  folder_paths: string[];
+  created_at?: string;
+}
+
+export interface BandwidthStats {
+  used_today_bytes: number;
+  quota_bytes: number;
+  remaining_bytes: number;
+  date: string;
+  percent: number;
+}
+
 export type FileCategory = 'all' | 'image' | 'video' | 'audio' | 'document' | 'archive' | 'executable';
 export type SortField = 'date' | 'name' | 'size' | 'views';
 export type SortOrder = 'asc' | 'desc';
@@ -84,6 +100,9 @@ export interface AppConfig {
   masked_phone?: string;
   user_account_connected?: boolean;
   upload_limit_gb?: number;
+
+  // Bandwidth Manager (Phase 6)
+  bandwidth_limit_gb?: number;
 }
 
 export interface UploadQueueItem {

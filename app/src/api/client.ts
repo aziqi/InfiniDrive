@@ -1,6 +1,6 @@
 // InfiniDrive  Axios API client with full endpoint coverage and error handling
 import axios, { AxiosInstance } from 'axios';
-import { AppConfig, BotStatus, FileCategory, FileItem, FolderItem, SortField, SortOrder, StorageStats } from '../types';
+import { AppConfig, BandwidthStats, BotStatus, FileCategory, FileItem, FolderGroup, FolderItem, SortField, SortOrder, StorageStats } from '../types';
 
 let cachedBaseUrl = 'http://127.0.0.1:8082';
 
@@ -285,8 +285,41 @@ export const api = {
     return res.data;
   },
 
-  async getLogs(since: number = 0): Promise<{ logs: any[] }> {
+  // Bandwidth Manager (Phase 6)
+  async getBandwidth(): Promise<BandwidthStats> {
     const client = createApiClient();
+    const res = await client.get('/api/bandwidth');
+    return res.data;
+  },
+
+  // Folder Groups (Phase 7)
+  async listFolderGroups(): Promise<{ groups: FolderGroup[] }> {
+    const client = createApiClient();
+    const res = await client.get('/api/folder-groups');
+    return res.data;
+  },
+
+  async createFolderGroup(
+    name: string,
+    folderPaths: string[] = [],
+    color: string = '#3b82f6'
+  ): Promise<{ status: string; group: FolderGroup }> {
+    const client = createApiClient();
+    const res = await client.post('/api/folder-groups', {
+      name,
+      color,
+      folder_paths: folderPaths
+    });
+    return res.data;
+  },
+
+  async deleteFolderGroup(groupId: number): Promise<{ status: string; deleted: boolean; id: number }> {
+    const client = createApiClient();
+    const res = await client.delete(`/api/folder-groups/${groupId}`);
+    return res.data;
+  },
+
+  async getLogs(since: number = 0): Promise<{ logs: any[] }> {    const client = createApiClient();
     const res = await client.get('/api/logs', { params: { since } });
     return res.data;
   },

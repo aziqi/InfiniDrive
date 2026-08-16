@@ -210,6 +210,11 @@ export const App: React.FC = () => {
               activeUploadsCount={0}
               authMode={config?.auth_mode || 'smart'}
               userConnected={stats?.user_account_connected}
+              currentFolder={currentFolder}
+              onSelectFolder={(folderPath) => {
+                setCurrentFolder(folderPath);
+              }}
+              onToast={addToast}
             />
 
             <main className="flex-1 h-full overflow-hidden flex flex-col bg-[#090a0e]">

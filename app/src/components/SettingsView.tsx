@@ -20,7 +20,8 @@ import {
   HardDrive,
   Loader2,
   Languages,
-  Check
+  Check,
+  Gauge
 } from 'lucide-react';
 import { AppConfig, AuthMode, OTPState, UserProfile } from '../types';
 import { api } from '../api/client';
@@ -52,6 +53,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [throttleDelaySec, setThrottleDelaySec] = useState<number>(1.0);
   const [maxParallelBotUploads, setMaxParallelBotUploads] = useState<number>(4);
   const [userChunkMb, setUserChunkMb] = useState<number>(1900);
+  const [bandwidthLimitGb, setBandwidthLimitGb] = useState<string>('250');
+  const [isSavingBandwidth, setIsSavingBandwidth] = useState(false);
 
   const [channelId, setChannelId] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -92,6 +95,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setThrottleDelaySec(config.throttle_delay_sec || 1.0);
       setMaxParallelBotUploads(config.max_parallel_bot_uploads || 4);
       setUserChunkMb(config.user_chunk_mb || 1900);
+      setBandwidthLimitGb(String(config.bandwidth_limit_gb ?? 250));
       if (config.api_id) setApiId(String(config.api_id));
     }
   }, [config]);
@@ -260,8 +264,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveAllSettings = async () => {
-    setIsSaving(true);
+  const parseBandwidthLimit = (raw: string): number => {
+    const parsed = parseFloat(raw);
+    if (!isFinite(parsed) || parsed <= 0) return 250;
+    return parsed;
+  };
+
+  // Persist the daily bandwidth quota on blur (reuses the shared config endpoint).
+  const handleSaveBandwidthLimit = async () => {
+    const limit = parseBandwidthLimit(bandwidthLimitGb);
+    setBandwidthLimitGb(String(limit));
+    if (config && Number(config.bandwidth_limit_gb ?? 250) === limit) return;
+
+    setIsSavingBandwidth(true);
+    try {
+      await api.updateConfig({ bandwidth_limit_gb: limit });
+      onToast('success', t('settings_bandwidth_title'), `${t('settings_bandwidth_label')}: ${limit} GB`);
+      onRefreshConfig();
+    } catch (err: any) {
+      onToast('error', 'Failed to Save', err.response?.data?.detail || err.message);
+    } finally {
+      setIsSavingBandwidth(false);
+    }
+  };
+
+  const handleSaveAllSettings = async () => {    setIsSaving(true);
     try {
       await api.updateConfig({
         channel_id: channelId.trim(),
@@ -272,6 +299,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         throttle_delay_sec: throttleDelaySec,
         max_parallel_bot_uploads: maxParallelBotUploads,
         user_chunk_mb: userChunkMb,
+        bandwidth_limit_gb: parseBandwidthLimit(bandwidthLimitGb),
         api_id: apiId.trim() ? parseInt(apiId.trim(), 10) : undefined
       });
       onToast('success', t('toast_settings_saved'), t('toast_settings_saved_msg'));
@@ -763,6 +791,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
               />
             </div>
+          </div>
+
+          {/* Bandwidth Manager (Phase 6) */}
+          <div className="pt-3 border-t border-white/5 space-y-2">
+            <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+              <Gauge className="w-3.5 h-3.5 text-cyan-400" />
+              {t('settings_bandwidth_label')}
+              {isSavingBandwidth && <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />}
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={bandwidthLimitGb}
+              onChange={(e) => setBandwidthLimitGb(e.target.value)}
+              onBlur={handleSaveBandwidthLimit}
+              placeholder={t('settings_bandwidth_placeholder')}
+              className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-cyan-500 outline-none"
+            />
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              {t('settings_bandwidth_hint')}
+            </p>
           </div>
         </div>
 

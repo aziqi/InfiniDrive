@@ -42,6 +42,8 @@ import { api } from '../api/client';
 import { useTranslation } from '../i18n/LanguageContext';
 import { scanDataTransferItems, ScannedFileItem } from '../utils/fileScanner';
 import { ConfirmModal } from './ConfirmModal';
+import { VirtualGrid } from './VirtualGrid';
+import { VirtualList } from './VirtualList';
 
 interface FileManagerProps {
   files: FileItem[];
@@ -123,6 +125,9 @@ export const FileManager: React.FC<FileManagerProps> = ({
   const [showZoomBadge, setShowZoomBadge] = useState(false);
   const zoomTimeoutRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Scroll container for the virtualized (windowed) grid / list views.
+  // It lives inside the outer wrapper that owns the drag & drop handlers.
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Modals
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -642,24 +647,276 @@ export const FileManager: React.FC<FileManagerProps> = ({
     { id: 'executable', label: t('fm_cat_executable') }
   ];
 
-  // Dynamic grid column classes based on zoomLevel
-  const gridClasses = useMemo(() => {
-    switch (zoomLevel) {
-      case 0:
-        return 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2.5';
-      case 1:
-        return 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3';
-      case 3:
-        return 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-4';
-      case 4:
-        return 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4';
-      case 2:
-      default:
-        return 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5';
-    }
-  }, [zoomLevel]);
-
   const zoomPercents = [75, 90, 100, 125, 150];
+
+  // Grid card renderer — JSX lifted verbatim out of the previous inline map so all
+  // handlers (select, context menu, thumbnails, badges) stay in FileManager scope.
+  const renderFileCard = (file: FileItem) => {
+    const isSelected = selectedIds.has(file.file_id);
+    const isImage = file.mime_type.includes('image') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(file.file_name);
+    const isVideo = file.mime_type.includes('video') || /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v|ts)$/i.test(file.file_name);
+
+    return (
+      <div
+        key={file.file_id}
+        onClick={(e) => {
+          if (e.shiftKey || selectedIds.size > 0) {
+            handleItemSelect(file.file_id, e);
+          } else {
+            onPreview(file);
+            setLastSelectedId(file.file_id);
+          }
+        }}
+        className={`group relative rounded-xl border p-3 flex flex-col justify-between transition-all cursor-pointer select-none ${
+          isSelected
+            ? 'bg-blue-600/15 border-blue-500/50 ring-1 ring-blue-500 shadow-md shadow-blue-500/10'
+            : 'bg-[#11131a] border-white/5 hover:border-white/20 hover:bg-[#151722]'
+        }`}
+      >
+        {/* Selection Checkbox */}
+        <button
+          onClick={(e) => toggleSelect(file.file_id, e)}
+          className={`absolute top-2.5 left-2.5 z-10 p-1 rounded-lg transition-opacity cursor-pointer ${
+            isSelected || selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          } ${isSelected ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}
+        >
+          {isSelected ? <CheckSquare className="w-4 h-4 fill-blue-500/20" /> : <Square className="w-4 h-4" />}
+        </button>
+
+        {/* Top Right Badges & Context Menu */}
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-10">
+          {file.password && (
+            <span className="p-1 rounded bg-amber-500/20 text-amber-400" title="Password Protected">
+              <Lock className="w-3 h-3" />
+            </span>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveMenuId(activeMenuId === file.file_id ? null : file.file_id);
+            }}
+            className="p-1 rounded-lg bg-black/40 hover:bg-black/80 text-slate-400 hover:text-slate-200 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+            <MoreVertical className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Context Menu Dropdown */}
+        {activeMenuId === file.file_id && (
+          <div 
+            className="absolute top-9 right-2 z-30 w-44 rounded-xl bg-[#181a24] border border-white/10 shadow-2xl p-1.5 space-y-0.5 text-xs text-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { onPreview(file); setActiveMenuId(null); }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5 text-blue-400" />
+              <span>{t('fm_menu_preview')}</span>
+            </button>
+            <button
+              onClick={() => { onDownload(file); setActiveMenuId(null); }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{t('fm_menu_download')}</span>
+            </button>
+            <button
+              onClick={() => { copyLink(file); setActiveMenuId(null); }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
+            >
+              <Copy className="w-3.5 h-3.5 text-purple-400" />
+              <span>{t('fm_menu_copy_link')}</span>
+            </button>
+            <button
+              onClick={() => { onShare?.(file); setActiveMenuId(null); }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
+            >
+              <Share2 className="w-3.5 h-3.5 text-blue-400" />
+              <span>{t('fm_menu_share')}</span>
+            </button>
+            <button
+              onClick={() => { onRename(file); setActiveMenuId(null); }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+              <span>{t('fm_menu_rename')}</span>
+            </button>
+            <div className="h-px bg-white/5 my-1" />
+            <button
+              onClick={() => { onDelete(file); setActiveMenuId(null); }}
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 text-left transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{t('fm_menu_delete')}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Thumbnail / Icon Container */}
+        <div className="w-full aspect-square rounded-lg bg-[#181a24]/60 border border-white/5 flex items-center justify-center mb-2.5 overflow-hidden relative select-none">
+          {isImage && !failedThumbs[file.file_id] ? (
+            <img 
+              src={api.getFilePreviewUrl(file.file_id)} 
+              alt="" 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
+              onError={() => setFailedThumbs(prev => ({ ...prev, [file.file_id]: true }))}
+            />
+          ) : (isVideo || file.has_thumbnail) && !failedThumbs[file.file_id] ? (
+            <div className="w-full h-full relative group/poster flex items-center justify-center bg-[#10121a]">
+              <img 
+                src={api.getThumbnailUrl(file.file_id)} 
+                alt="" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+                onError={() => setFailedThumbs(prev => ({ ...prev, [file.file_id]: true }))}
+              />
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                <div className="w-9 h-9 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-lg shadow-blue-600/40 group-hover:scale-110 transition-transform">
+                  <Play className="w-4 h-4 ml-0.5 fill-white" />
+                </div>
+              </div>
+            </div>
+          ) : isVideo ? (
+            <div className="w-full h-full bg-gradient-to-br from-[#141828] via-[#0e101b] to-[#161a2c] flex flex-col items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-all">
+              <div className="w-9 h-9 rounded-full bg-blue-600/80 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 group-hover:scale-110 transition-transform">
+                <Play className="w-4 h-4 ml-0.5 fill-white" />
+              </div>
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
+              {getFileIcon(file.mime_type, file.file_name)}
+            </div>
+          )}
+
+          {Boolean(file.is_chunked) && (
+            <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-purple-500/80 backdrop-blur-sm text-[9px] font-bold text-white uppercase tracking-wider">
+              {file.total_chunks || 'Multi'} Parts
+            </span>
+          )}
+
+          {file.upload_source === 'user_account' && (
+            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-[9px] font-bold text-purple-300">
+              ð¤ MTProto
+            </span>
+          )}
+        </div>
+
+        {/* File Metadata */}
+        <div className="space-y-1">
+          <h4 className="text-xs font-medium text-slate-200 truncate group-hover:text-blue-400 transition-colors" title={file.file_name}>
+            {file.file_name}
+          </h4>
+          <div className="flex items-center justify-between text-[10px] text-slate-500">
+            <span>{formatBytes(file.file_size)}</span>
+            <span>{file.view_count || 0} views</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // List row renderer — JSX lifted verbatim out of the previous inline map.
+  const renderFileRow = (file: FileItem) => {
+    const isSelected = selectedIds.has(file.file_id);
+
+    return (
+      <div
+        key={file.file_id}
+        onClick={(e) => {
+          if (e.shiftKey || selectedIds.size > 0) {
+            handleItemSelect(file.file_id, e);
+          } else {
+            onPreview(file);
+            setLastSelectedId(file.file_id);
+          }
+        }}
+        className={`grid grid-cols-12 gap-3 px-3 py-2.5 rounded-xl items-center text-xs transition-all cursor-pointer select-none ${
+          isSelected
+            ? 'bg-blue-600/15 border border-blue-500/30'
+            : 'bg-[#11131a]/60 hover:bg-[#151722] border border-transparent hover:border-white/5'
+        }`}
+      >
+        <div className="col-span-6 flex items-center gap-3 min-w-0">
+          <button
+            onClick={(e) => toggleSelect(file.file_id, e)}
+            className={`p-0.5 rounded cursor-pointer ${isSelected ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            {isSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
+          </button>
+
+          <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+            {getFileIcon(file.mime_type, file.file_name)}
+          </div>
+
+          <div className="min-w-0 flex items-center gap-2">
+            <span className="font-medium text-slate-200 truncate hover:text-blue-400 transition-colors">
+              {file.file_name}
+            </span>
+            {file.upload_source === 'user_account' ? (
+              <span className="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-mono shrink-0">
+                ð¤ MTProto
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[9px] font-mono shrink-0">
+                ð¤ Bot
+              </span>
+            )}
+            {Boolean(file.is_chunked) && (
+              <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-mono shrink-0">
+                {file.total_chunks || 'Multi'} Parts
+              </span>
+            )}
+            {file.password && <Lock className="w-3 h-3 text-amber-400 shrink-0" />}
+          </div>
+        </div>
+
+        <div className="col-span-2 text-slate-400 font-mono text-[11px]">
+          {formatBytes(file.file_size)}
+        </div>
+
+        <div className="col-span-2 text-slate-500 text-[11px]">
+          {file.uploaded_at?.split('T')[0] || file.uploaded_at?.split(' ')[0]}
+        </div>
+
+        <div className="col-span-1 text-center text-slate-400 text-[11px]">
+          {file.view_count || 0}
+        </div>
+
+        <div className="col-span-1 flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => copyLink(file)}
+            className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-purple-400 transition-colors cursor-pointer"
+            title={t('fm_menu_copy_link')}
+          >
+            {copiedId === file.file_id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => onShare?.(file)}
+            className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-blue-400 transition-colors cursor-pointer"
+            title={t('fm_menu_share')}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onDownload(file)}
+            className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
+            title={t('fm_menu_download')}
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => onDelete(file)}
+            className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+            title={t('fm_menu_delete')}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div 
@@ -833,7 +1090,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
       </div>
 
       {/* Main Content Area: Subfolders + Files */}
-      <div className="flex-1 overflow-y-auto p-4 relative">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 relative">
         {/* Subfolders Section */}
         {currentSubfolders.length > 0 && (
           <div className="mb-5 space-y-2">
@@ -965,174 +1222,15 @@ export const FileManager: React.FC<FileManagerProps> = ({
             )}
           </div>
         ) : viewMode === 'grid' ? (
-          /* Grid View with Zoom Dynamic Columns */
-          <div className={`${gridClasses} pb-24`}>
-            {filteredFiles.map((file) => {
-              const isSelected = selectedIds.has(file.file_id);
-              const isImage = file.mime_type.includes('image') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(file.file_name);
-              const isVideo = file.mime_type.includes('video') || /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v|ts)$/i.test(file.file_name);
-
-              return (
-                <div
-                  key={file.file_id}
-                  onClick={(e) => {
-                    if (e.shiftKey || selectedIds.size > 0) {
-                      handleItemSelect(file.file_id, e);
-                    } else {
-                      onPreview(file);
-                      setLastSelectedId(file.file_id);
-                    }
-                  }}
-                  className={`group relative rounded-xl border p-3 flex flex-col justify-between transition-all cursor-pointer select-none ${
-                    isSelected
-                      ? 'bg-blue-600/15 border-blue-500/50 ring-1 ring-blue-500 shadow-md shadow-blue-500/10'
-                      : 'bg-[#11131a] border-white/5 hover:border-white/20 hover:bg-[#151722]'
-                  }`}
-                >
-                  {/* Selection Checkbox */}
-                  <button
-                    onClick={(e) => toggleSelect(file.file_id, e)}
-                    className={`absolute top-2.5 left-2.5 z-10 p-1 rounded-lg transition-opacity cursor-pointer ${
-                      isSelected || selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                    } ${isSelected ? 'text-blue-400' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    {isSelected ? <CheckSquare className="w-4 h-4 fill-blue-500/20" /> : <Square className="w-4 h-4" />}
-                  </button>
-
-                  {/* Top Right Badges & Context Menu */}
-                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-10">
-                    {file.password && (
-                      <span className="p-1 rounded bg-amber-500/20 text-amber-400" title="Password Protected">
-                        <Lock className="w-3 h-3" />
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenuId(activeMenuId === file.file_id ? null : file.file_id);
-                      }}
-                      className="p-1 rounded-lg bg-black/40 hover:bg-black/80 text-slate-400 hover:text-slate-200 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                    >
-                      <MoreVertical className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Context Menu Dropdown */}
-                  {activeMenuId === file.file_id && (
-                    <div 
-                      className="absolute top-9 right-2 z-30 w-44 rounded-xl bg-[#181a24] border border-white/10 shadow-2xl p-1.5 space-y-0.5 text-xs text-slate-200"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        onClick={() => { onPreview(file); setActiveMenuId(null); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-blue-400" />
-                        <span>{t('fm_menu_preview')}</span>
-                      </button>
-                      <button
-                        onClick={() => { onDownload(file); setActiveMenuId(null); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
-                      >
-                        <Download className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>{t('fm_menu_download')}</span>
-                      </button>
-                      <button
-                        onClick={() => { copyLink(file); setActiveMenuId(null); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
-                      >
-                        <Copy className="w-3.5 h-3.5 text-purple-400" />
-                        <span>{t('fm_menu_copy_link')}</span>
-                      </button>
-                      <button
-                        onClick={() => { onShare?.(file); setActiveMenuId(null); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
-                      >
-                        <Share2 className="w-3.5 h-3.5 text-blue-400" />
-                        <span>{t('fm_menu_share')}</span>
-                      </button>
-                      <button
-                        onClick={() => { onRename(file); setActiveMenuId(null); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                        <span>{t('fm_menu_rename')}</span>
-                      </button>
-                      <div className="h-px bg-white/5 my-1" />
-                      <button
-                        onClick={() => { onDelete(file); setActiveMenuId(null); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 text-left transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>{t('fm_menu_delete')}</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Thumbnail / Icon Container */}
-                  <div className="w-full aspect-square rounded-lg bg-[#181a24]/60 border border-white/5 flex items-center justify-center mb-2.5 overflow-hidden relative select-none">
-                    {isImage && !failedThumbs[file.file_id] ? (
-                      <img 
-                        src={api.getFilePreviewUrl(file.file_id)} 
-                        alt="" 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                        onError={() => setFailedThumbs(prev => ({ ...prev, [file.file_id]: true }))}
-                      />
-                    ) : (isVideo || file.has_thumbnail) && !failedThumbs[file.file_id] ? (
-                      <div className="w-full h-full relative group/poster flex items-center justify-center bg-[#10121a]">
-                        <img 
-                          src={api.getThumbnailUrl(file.file_id)} 
-                          alt="" 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          onError={() => setFailedThumbs(prev => ({ ...prev, [file.file_id]: true }))}
-                        />
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
-                          <div className="w-9 h-9 rounded-full bg-blue-600/90 text-white flex items-center justify-center shadow-lg shadow-blue-600/40 group-hover:scale-110 transition-transform">
-                            <Play className="w-4 h-4 ml-0.5 fill-white" />
-                          </div>
-                        </div>
-                      </div>
-                    ) : isVideo ? (
-                      <div className="w-full h-full bg-gradient-to-br from-[#141828] via-[#0e101b] to-[#161a2c] flex flex-col items-center justify-center border border-white/5 group-hover:border-blue-500/30 transition-all">
-                        <div className="w-9 h-9 rounded-full bg-blue-600/80 text-white flex items-center justify-center shadow-lg shadow-blue-600/30 group-hover:scale-110 transition-transform">
-                          <Play className="w-4 h-4 ml-0.5 fill-white" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center">
-                        {getFileIcon(file.mime_type, file.file_name)}
-                      </div>
-                    )}
-
-                    {Boolean(file.is_chunked) && (
-                      <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-purple-500/80 backdrop-blur-sm text-[9px] font-bold text-white uppercase tracking-wider">
-                        {file.total_chunks || 'Multi'} Parts
-                      </span>
-                    )}
-
-                    {file.upload_source === 'user_account' && (
-                      <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-[9px] font-bold text-purple-300">
-                        ð¤ MTProto
-                      </span>
-                    )}
-                  </div>
-
-                  {/* File Metadata */}
-                  <div className="space-y-1">
-                    <h4 className="text-xs font-medium text-slate-200 truncate group-hover:text-blue-400 transition-colors" title={file.file_name}>
-                      {file.file_name}
-                    </h4>
-                    <div className="flex items-center justify-between text-[10px] text-slate-500">
-                      <span>{formatBytes(file.file_size)}</span>
-                      <span>{file.view_count || 0} views</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          /* Grid View — virtualized rows, zoom-driven dynamic column count */
+          <VirtualGrid
+            items={filteredFiles}
+            zoomLevel={zoomLevel}
+            scrollElementRef={scrollContainerRef}
+            renderItem={renderFileCard}
+            recalcKey={`grid|${currentFolder}|${currentSubfolders.length}|${zoomLevel}`}
+            className="pb-24"
+          />
         ) : (
           /* List View */
           <div className="space-y-1 pb-24">
@@ -1154,106 +1252,13 @@ export const FileManager: React.FC<FileManagerProps> = ({
               <div className="col-span-1 text-right">{t('fm_th_actions')}</div>
             </div>
 
-            {/* List Items */}
-            {filteredFiles.map((file) => {
-              const isSelected = selectedIds.has(file.file_id);
-
-              return (
-                <div
-                  key={file.file_id}
-                  onClick={(e) => {
-                    if (e.shiftKey || selectedIds.size > 0) {
-                      handleItemSelect(file.file_id, e);
-                    } else {
-                      onPreview(file);
-                      setLastSelectedId(file.file_id);
-                    }
-                  }}
-                  className={`grid grid-cols-12 gap-3 px-3 py-2.5 rounded-xl items-center text-xs transition-all cursor-pointer select-none ${
-                    isSelected
-                      ? 'bg-blue-600/15 border border-blue-500/30'
-                      : 'bg-[#11131a]/60 hover:bg-[#151722] border border-transparent hover:border-white/5'
-                  }`}
-                >
-                  <div className="col-span-6 flex items-center gap-3 min-w-0">
-                    <button
-                      onClick={(e) => toggleSelect(file.file_id, e)}
-                      className={`p-0.5 rounded cursor-pointer ${isSelected ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}
-                    >
-                      {isSelected ? <CheckSquare className="w-3.5 h-3.5" /> : <Square className="w-3.5 h-3.5" />}
-                    </button>
-
-                    <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
-                      {getFileIcon(file.mime_type, file.file_name)}
-                    </div>
-
-                    <div className="min-w-0 flex items-center gap-2">
-                      <span className="font-medium text-slate-200 truncate hover:text-blue-400 transition-colors">
-                        {file.file_name}
-                      </span>
-                      {file.upload_source === 'user_account' ? (
-                        <span className="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-mono shrink-0">
-                          ð¤ MTProto
-                        </span>
-                      ) : (
-                        <span className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[9px] font-mono shrink-0">
-                          ð¤ Bot
-                        </span>
-                      )}
-                      {Boolean(file.is_chunked) && (
-                        <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-mono shrink-0">
-                          {file.total_chunks || 'Multi'} Parts
-                        </span>
-                      )}
-                      {file.password && <Lock className="w-3 h-3 text-amber-400 shrink-0" />}
-                    </div>
-                  </div>
-
-                  <div className="col-span-2 text-slate-400 font-mono text-[11px]">
-                    {formatBytes(file.file_size)}
-                  </div>
-
-                  <div className="col-span-2 text-slate-500 text-[11px]">
-                    {file.uploaded_at?.split('T')[0] || file.uploaded_at?.split(' ')[0]}
-                  </div>
-
-                  <div className="col-span-1 text-center text-slate-400 text-[11px]">
-                    {file.view_count || 0}
-                  </div>
-
-                  <div className="col-span-1 flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => copyLink(file)}
-                      className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-purple-400 transition-colors cursor-pointer"
-                      title={t('fm_menu_copy_link')}
-                    >
-                      {copiedId === file.file_id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                    <button
-                      onClick={() => onShare?.(file)}
-                      className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-blue-400 transition-colors cursor-pointer"
-                      title={t('fm_menu_share')}
-                    >
-                      <Share2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onDownload(file)}
-                      className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
-                      title={t('fm_menu_download')}
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onDelete(file)}
-                      className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
-                      title={t('fm_menu_delete')}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {/* List Items — virtualized rows */}
+            <VirtualList
+              items={filteredFiles}
+              scrollElementRef={scrollContainerRef}
+              renderItem={renderFileRow}
+              recalcKey={`list|${currentFolder}|${currentSubfolders.length}`}
+            />
           </div>
         )}
       </div>

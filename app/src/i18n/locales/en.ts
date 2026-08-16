@@ -257,6 +257,29 @@ export const en = {
   share_revoke: 'Revoke Link',
   share_done: 'Done',
 
+  // Bandwidth Manager (Phase 6)
+  settings_bandwidth_title: 'Bandwidth Manager',
+  settings_bandwidth_label: 'Daily bandwidth limit (GB)',
+  settings_bandwidth_placeholder: 'e.g. 250',
+  settings_bandwidth_hint: 'Uploads and downloads are blocked once this daily quota is reached. Resets automatically every day.',
+  dash_bandwidth_title: 'Daily Bandwidth',
+  dash_bandwidth_used: 'Bandwidth used today',
+  dash_bandwidth_remaining: '{remaining} remaining',
+  bandwidth_exceeded: 'Daily bandwidth quota exceeded.',
+
+  // Folder Groups (Phase 7)
+  sidebar_groups: 'Folder Groups',
+  sidebar_new_group: 'New Group',
+  sidebar_group_name: 'Group name',
+  sidebar_group_add_current: 'The current folder ({folder}) will be added to this group.',
+  sidebar_group_empty: 'No folders in this group yet.',
+  sidebar_groups_empty: 'No folder groups yet. Create one to organize your folders.',
+  sidebar_delete_group: 'Delete group',
+  toast_group_created: 'Group Created',
+  toast_group_created_msg: 'Folder group {name} created successfully.',
+  toast_group_deleted: 'Group Deleted',
+  toast_group_deleted_msg: 'Folder group {name} was removed.',
+
 };
 
 export type TranslationKey = keyof typeof en;
