@@ -1,3 +1,4 @@
+// InfiniDrive — Settings view: MTProto engine config, language, bot management
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
