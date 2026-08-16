@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.png" alt="InfiniDrive Logo" width="128" style="border-radius: 24px; margin-bottom: 8px;" />
+
 # ⚡ InfiniDrive Desktop
 
 ### Infinite Telegram Cloud Storage — Powered by Dual-Engine Architecture
