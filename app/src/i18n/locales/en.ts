@@ -63,6 +63,7 @@ export const en = {
   fm_menu_preview: 'Preview',
   fm_menu_download: 'Download',
   fm_menu_copy_link: 'Copy Direct Link',
+  fm_menu_share: 'Share Link',
   fm_menu_rename: 'Rename',
   fm_menu_rename_folder: 'Rename Folder',
   fm_menu_lock_folder: 'Lock Folder',
@@ -236,6 +237,26 @@ export const en = {
   toast_folder_deleted_msg: 'Removed folder {path}',
   toast_folder_renamed: 'Folder Renamed',
   toast_folder_renamed_msg: 'Renamed folder to {name}',
+  // Share System
+  share_title: 'Share File',
+  share_link_label: 'Shareable Link',
+  share_password_label: 'Password Protection',
+  share_password_ph: 'Set a password for this link',
+  share_password_apply: 'Apply',
+  share_pw_empty: 'Enter a password first.',
+  share_pw_set: 'Link password updated.',
+  share_expiry_label: 'Link Expiry',
+  share_expiry_never: 'Never expires',
+  share_expiry_1d: '1 day',
+  share_expiry_7d: '7 days',
+  share_expiry_30d: '30 days',
+  share_expiry_apply: 'Apply',
+  share_expiry_set: 'Link expiry updated.',
+  share_copied: 'Share link copied to clipboard.',
+  share_revoked: 'Share link revoked.',
+  share_revoke: 'Revoke Link',
+  share_done: 'Done',
+
 };
 
 export type TranslationKey = keyof typeof en;

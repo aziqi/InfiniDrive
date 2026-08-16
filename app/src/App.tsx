@@ -11,9 +11,11 @@ import { UploadModal } from './components/UploadModal';
 import { FilePreviewModal } from './components/FilePreviewModal';
 import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { RenameModal } from './components/RenameModal';
+import { ShareDialog } from './components/ShareDialog';
 import { ToastContainer } from './components/Toast';
 import { AppConfig, BotStatus, FileItem, FolderItem, StorageStats, ToastMessage } from './types';
 import { api } from './api/client';
+import { useHealth, useConfig, useStats, useFiles, useFolders, useLockedFolders, useBots, useRefreshAll } from './hooks/queries';
 import { useTranslation } from './i18n/LanguageContext';
 import { ScannedFileItem } from './utils/fileScanner';
 import { Loader2 } from 'lucide-react';
@@ -21,23 +23,36 @@ import { Loader2 } from 'lucide-react';
 export const App: React.FC = () => {
   const { t } = useTranslation();
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
-  const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
-  const [sidecarReady, setSidecarReady] = useState<boolean>(false);
-  const [config, setConfig] = useState<AppConfig | null>(null);
-  const [stats, setStats] = useState<StorageStats | null>(null);
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [folders, setFolders] = useState<FolderItem[]>([{ path: '/', name: 'Root' }]);
-  const [lockedFolders, setLockedFolders] = useState<string[]>([]);
   const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
   const [currentFolder, setCurrentFolder] = useState<string>('all');
-  const [bots, setBots] = useState<BotStatus[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState<boolean>(false);
+
+  // Server-state (TanStack Query) — replaces manual fetchData() + 4s polling.
+  const health = useHealth();
+  const configQuery = useConfig();
+  const config: AppConfig | null = configQuery.data ?? null;
+  const isConfigured: boolean | null = config ? Boolean(config.is_configured) : null;
+  const sidecarReady: boolean = health.isSuccess;
+
+  const statsQuery = useStats(isConfigured === true);
+  const filesQuery = useFiles(isConfigured === true);
+  const foldersQuery = useFolders(isConfigured === true);
+  const lockedQuery = useLockedFolders(isConfigured === true);
+  const botsQuery = useBots(isConfigured === true);
+  const refreshAll = useRefreshAll();
+
+  const stats: StorageStats | null = statsQuery.data ?? null;
+  const files: FileItem[] = filesQuery.data ?? [];
+  const folders: FolderItem[] = foldersQuery.data ?? [{ path: '/', name: 'Root' }];
+  const lockedFolders: string[] = lockedQuery.data ?? [];
+  const bots: BotStatus[] = botsQuery.data ?? [];
+  const isLoadingFiles: boolean = filesQuery.isFetching;
   
   // Modals
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [droppedItems, setDroppedItems] = useState<ScannedFileItem[]>([]);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [renamingFile, setRenamingFile] = useState<FileItem | null>(null);
+  const [shareFile, setShareFile] = useState<FileItem | null>(null);
   const [deletingFile, setDeletingFile] = useState<FileItem | null>(null);
   const [bulkDeletingIds, setBulkDeletingIds] = useState<string[] | null>(null);
   const [isDeletingAction, setIsDeletingAction] = useState<boolean>(false);
@@ -56,48 +71,6 @@ export const App: React.FC = () => {
   const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
-
-  // Fetch all core data
-  const fetchData = useCallback(async () => {
-    try {
-      await api.getHealth();
-      setSidecarReady(true);
-    } catch (err: any) {
-      console.warn('Backend connecting...', err.message);
-      setSidecarReady(false);
-      return;
-    }
-
-    try {
-      const cfg = await api.getConfig();
-      setConfig(cfg);
-      setIsConfigured(cfg.is_configured);
-
-      if (cfg.is_configured) {
-        const [statsData, filesData, botsData, foldersData, locksData] = await Promise.all([
-          api.getStats().catch(() => null),
-          api.getFiles().catch(() => ({ files: [] })),
-          api.getBotsStatus().catch(() => ({ bots: [] })),
-          api.getFolders().catch(() => ({ folders: [{ path: '/', name: 'Root' }] })),
-          api.getLockedFolders().catch(() => ({ locked_folders: [] }))
-        ]);
-
-        if (statsData) setStats(statsData);
-        if (filesData) setFiles(filesData.files);
-        if (botsData) setBots(botsData.bots);
-        if (foldersData && foldersData.folders) setFolders(foldersData.folders);
-        if (locksData && locksData.locked_folders) setLockedFolders(locksData.locked_folders);
-      }
-    } catch (err: any) {
-      console.warn('Failed to load application data:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 4000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
 
   useEffect(() => {
     if (window.electronAPI) {
@@ -156,12 +129,12 @@ export const App: React.FC = () => {
         await api.deleteFile(deletingFile.file_id);
         addToast('success', t('toast_file_deleted'), t('toast_file_deleted_msg', { name: deletingFile.file_name }));
         setDeletingFile(null);
-        fetchData();
+        refreshAll();
       } else if (bulkDeletingIds && bulkDeletingIds.length > 0) {
         const res = await api.bulkDeleteFiles(bulkDeletingIds);
         addToast('success', t('toast_bulk_delete_complete'), t('toast_bulk_delete_msg', { count: res.deleted_count }));
         setBulkDeletingIds(null);
-        fetchData();
+        refreshAll();
       }
     } catch (err: any) {
       addToast('error', 'Delete Failed', err.message);
@@ -174,7 +147,7 @@ export const App: React.FC = () => {
     try {
       const res = await api.moveFiles(fileIds, targetFolder);
       addToast('success', t('toast_files_moved'), t('toast_files_moved_msg', { count: res.moved_count, target: targetFolder }));
-      fetchData();
+      refreshAll();
     } catch (err: any) {
       addToast('error', 'Move Failed', err.message);
     }
@@ -183,14 +156,8 @@ export const App: React.FC = () => {
   const handleCreateFolder = async (folderPath: string) => {
     try {
       await api.createFolder(folderPath);
-      const parts = folderPath.split('/').filter(Boolean);
-      const folderName = parts[parts.length - 1] || 'Folder';
-      setFolders(prev => {
-        if (prev.some(f => f.path === folderPath)) return prev;
-        return [...prev, { path: folderPath, name: folderName }];
-      });
       addToast('success', t('toast_folder_created'), t('toast_folder_created_msg', { path: folderPath }));
-      fetchData();
+      refreshAll();
     } catch (err: any) {
       addToast('error', 'Folder Creation Failed', err.message);
     }
@@ -225,10 +192,9 @@ export const App: React.FC = () => {
           </div>
         ) : !isConfigured ? (
           <SetupWizard 
-            onComplete={() => {
-              setIsConfigured(true);
-              fetchData();
-            }}
+              onComplete={() => {
+                refreshAll();
+              }}
             onToast={addToast}
           />
         ) : (
@@ -272,7 +238,7 @@ export const App: React.FC = () => {
                   onSelectFolder={setCurrentFolder}
                   onCreateFolder={handleCreateFolder}
                   isLoading={isLoadingFiles}
-                  onRefresh={fetchData}
+                  onRefresh={refreshAll}
                   onPreview={setPreviewFile}
                   onDownload={handleDownload}
                   onDelete={handleDelete}
@@ -284,6 +250,7 @@ export const App: React.FC = () => {
                     setIsUploadOpen(true);
                   }}
                   onFilesDropped={handleFilesDropped}
+                  onShare={setShareFile}
                   onToast={addToast}
                 />
               )}
@@ -302,7 +269,7 @@ export const App: React.FC = () => {
                 <BotManager
                   bots={bots}
                   config={config}
-                  onRefreshBots={fetchData}
+                  onRefreshBots={refreshAll}
                   onToast={addToast}
                 />
               )}
@@ -310,7 +277,7 @@ export const App: React.FC = () => {
               {currentTab === 'settings' && (
                 <SettingsView
                   config={config}
-                  onRefreshConfig={fetchData}
+                  onRefreshConfig={refreshAll}
                   onToast={addToast}
                 />
               )}
@@ -329,7 +296,7 @@ export const App: React.FC = () => {
         initialItems={droppedItems}
         currentFolder={currentFolder}
         onUploadSuccess={() => {
-          fetchData();
+          refreshAll();
           setIsUploadOpen(false);
           setDroppedItems([]);
         }}
@@ -369,7 +336,7 @@ export const App: React.FC = () => {
             await api.renameFile(renamingFile.file_id, newName);
             addToast('success', 'File Renamed', `Renamed to ${newName}`);
             setRenamingFile(null);
-            fetchData();
+            refreshAll();
           } catch (err: any) {
             addToast('error', 'Rename Failed', err.message);
           }
@@ -378,6 +345,10 @@ export const App: React.FC = () => {
 
       {/* Toast Notification Container */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
+      {shareFile && (
+        <ShareDialog file={shareFile} onClose={() => setShareFile(null)} onToast={addToast} />
+      )}
     </div>
   );
 };

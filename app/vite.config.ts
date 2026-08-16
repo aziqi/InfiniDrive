@@ -11,7 +11,18 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: false
+    sourcemap: false,
+    chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          query: ['@tanstack/react-query'],
+          motion: ['framer-motion'],
+          icons: ['lucide-react', '@phosphor-icons/react'],
+        },
+      },
+    },
   }
 });
 
