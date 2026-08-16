@@ -1,3 +1,4 @@
+// InfiniDrive — Turbo Upload Modal with live speedometer and minimizable floating dock
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
