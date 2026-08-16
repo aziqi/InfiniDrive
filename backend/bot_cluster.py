@@ -1,3 +1,4 @@
+# InfiniDrive Bot Cluster — round-robin multi-bot load balancer for Telegram Bot API
 import asyncio
 import hashlib
 import logging
