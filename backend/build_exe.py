@@ -56,16 +56,20 @@ def build_sidecar():
         str(entry_point)
     ]
 
-    if icon_path.exists():
+    if icon_path.exists() and sys.platform == "win32":
         cmd.extend(["--icon", str(icon_path)])
 
     print("Running PyInstaller command:", " ".join(cmd))
     res = subprocess.run(cmd, cwd=str(backend_dir))
     if res.returncode == 0:
-        primary_exe = dist_dir / "infinidrive_backend.exe"
-        legacy_exe = dist_dir / "tgdrive_backend.exe"
-        shutil.copy2(primary_exe, legacy_exe)
-        print(f"[SUCCESS] Built sidecar binary in: {primary_exe} and {legacy_exe}")
+        ext = ".exe" if sys.platform == "win32" else ""
+        primary_exe = dist_dir / f"infinidrive_backend{ext}"
+        legacy_exe = dist_dir / f"tgdrive_backend{ext}"
+        if primary_exe.exists():
+            shutil.copy2(primary_exe, legacy_exe)
+            print(f"[SUCCESS] Built sidecar binary in: {primary_exe} and {legacy_exe}")
+        else:
+            print(f"[WARN] Primary binary {primary_exe} not found after build")
     else:
         print("[ERROR] PyInstaller build failed with return code:", res.returncode)
 
