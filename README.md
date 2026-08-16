@@ -6,7 +6,8 @@
 
 ### Infinite Telegram Cloud Storage — Powered by Dual-Engine Architecture
 
-[![Platform](https://img.shields.io/badge/Platform-Windows%2011-0078D4?style=for-the-badge&logo=windows11)](https://github.com/aziqi/InfiniDrive/releases)
+[![Platform Windows](https://img.shields.io/badge/Windows-11%20%7C%2010-0078D4?style=for-the-badge&logo=windows11)](https://github.com/aziqi/InfiniDrive/releases)
+[![Platform Linux](https://img.shields.io/badge/Linux-Arch%20%7C%20Ubuntu-1793D1?style=for-the-badge&logo=archlinux)](https://github.com/aziqi/InfiniDrive)
 [![Version](https://img.shields.io/badge/Version-v1.0.0-blue?style=for-the-badge)](https://github.com/aziqi/InfiniDrive/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![Made with Electron](https://img.shields.io/badge/Built%20with-Electron%2033-9feaf9?style=for-the-badge&logo=electron)](https://www.electronjs.org/)
@@ -122,6 +123,8 @@ Switch anytime in **Settings → Language**.
 
 ## 📥 Download & Install
 
+### 🪟 Windows (Pre-built Binaries)
+
 > **➡️ [Go to Releases →](https://github.com/aziqi/InfiniDrive/releases/latest)**
 
 | Package | Description | Recommended |
@@ -129,6 +132,29 @@ Switch anytime in **Settings → Language**.
 | `InfiniDrive Setup 1.0.0.exe` | Windows NSIS Installer — creates Desktop & Start Menu shortcuts | ✅ **Most users** |
 | `InfiniDrive-Portable-1.0.0.exe` | Single-file portable — run from anywhere, no install needed | ✅ USB / portable use |
 | `InfiniDrive-1.0.0-win.zip` | ZIP archive — extract folder and run `InfiniDrive.exe` directly | Advanced |
+
+---
+
+### 🐧 Linux & Arch Linux (1-Line Quick Install)
+
+Install and configure InfiniDrive with a **single command** (auto-installs dependencies, builds UI, creates Desktop icon & CLI command `infinidrive`):
+
+```bash
+curl -sSL https://raw.githubusercontent.com/aziqi/InfiniDrive/main/install.sh | bash
+```
+
+> Works seamlessly on **Arch Linux (Pacman / AUR)**, **Ubuntu / Debian**, **Fedora**, and **openSUSE**.
+
+#### 🚀 How to Launch on Linux:
+- **Application Menu**: Search for `InfiniDrive` in Rofi / Wofi / KDE Application Launcher / GNOME Dash.
+- **Terminal CLI**: Run `infinidrive` anywhere.
+
+#### 📦 Arch Linux PKGBUILD (Optional Native Build):
+```bash
+git clone https://github.com/aziqi/InfiniDrive.git
+cd InfiniDrive/pkg/arch
+makepkg -si
+```
 
 ---
 
