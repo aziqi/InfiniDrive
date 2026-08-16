@@ -1,3 +1,4 @@
+// InfiniDrive — First-time setup wizard with bot token and channel ID configuration
 import React, { useState } from 'react';
 import { 
   Bot, 
