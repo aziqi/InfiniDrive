@@ -1,6 +1,6 @@
 # Maintainer: aziqi <aziqi@users.noreply.github.com>
 pkgname=infinidrive-git
-pkgver=1.0.0.r0
+pkgver=1.1.0.r0
 pkgrel=1
 pkgdesc="High-Performance Infinite Telegram Cloud Storage Desktop App"
 arch=('x86_64')
@@ -15,7 +15,7 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd "$srcdir/InfiniDrive"
-  printf "1.0.0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  printf "1.1.0.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 build() {
