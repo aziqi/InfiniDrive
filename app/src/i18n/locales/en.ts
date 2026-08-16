@@ -1,3 +1,4 @@
+// InfiniDrive — Full English translation pack
 export const en = {
   // Brand & Navigation
   app_name: 'InfiniDrive',
