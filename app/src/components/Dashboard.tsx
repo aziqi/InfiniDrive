@@ -1,4 +1,4 @@
-// InfiniDrive  Dashboard with storage statistics and recent activity
+// InfiniDrive — Dashboard with storage statistics and recent activity
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 

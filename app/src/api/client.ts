@@ -1,4 +1,4 @@
-// InfiniDrive  Axios API client with full endpoint coverage and error handling
+// InfiniDrive — Axios API client with full endpoint coverage and error handling
 import axios, { AxiosInstance } from 'axios';
 import { AppConfig, BandwidthStats, BotStatus, ConnectionStatus, FileCategory, FileItem, FolderGroup, FolderItem, SortField, SortOrder, StorageStats } from '../types';
 

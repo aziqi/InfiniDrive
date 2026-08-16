@@ -1,4 +1,4 @@
-// InfiniDrive  File Manager: grid/list view, multi-select, folder context menu
+// InfiniDrive — File Manager: grid/list view, multi-select, folder context menu
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 

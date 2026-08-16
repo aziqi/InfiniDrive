@@ -1,4 +1,4 @@
-// InfiniDrive  Paket terjemahan Bahasa Indonesia lengkap
+// InfiniDrive — Paket terjemahan Bahasa Indonesia lengkap
 import { TranslationKey } from './en';
 
 export const id: Record<TranslationKey, string> = {

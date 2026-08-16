@@ -1,4 +1,4 @@
-# InfiniDrive Smart Dual-Engine Config  auto-selects MTProto for files >= smart_threshold_mb
+# InfiniDrive Smart Dual-Engine Config — auto-selects MTProto for files >= smart_threshold_mb
 import os
 import json
 import logging
