@@ -10,7 +10,7 @@
 [![Platform Linux](https://img.shields.io/badge/Linux-Arch%20%7C%20Ubuntu-1793D1?style=for-the-badge&logo=archlinux)](https://github.com/aziqi/InfiniDrive)
 [![Version](https://img.shields.io/badge/Version-v1.0.0-blue?style=for-the-badge)](https://github.com/aziqi/InfiniDrive/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![Engineered with Antigravity](https://img.shields.io/badge/Engineered%20with-Antigravity-7C3AED?style=for-the-badge&logo=google)](https://github.com/google-deepmind)
+[![Engineered with Antigravity](https://img.shields.io/badge/Engineered%20with-Antigravity-7C3AED?style=for-the-badge&logo=deepmind&logoColor=white)](https://github.com/google-deepmind)
 [![Made with Electron](https://img.shields.io/badge/Built%20with-Electron%2033-9feaf9?style=for-the-badge&logo=electron)](https://www.electronjs.org/)
 [![Telegram](https://img.shields.io/badge/Storage-Telegram%20Cloud-2CA5E0?style=for-the-badge&logo=telegram)](https://telegram.org/)
 
