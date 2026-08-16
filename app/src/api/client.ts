@@ -1,6 +1,6 @@
 // InfiniDrive  Axios API client with full endpoint coverage and error handling
 import axios, { AxiosInstance } from 'axios';
-import { AppConfig, BandwidthStats, BotStatus, FileCategory, FileItem, FolderGroup, FolderItem, SortField, SortOrder, StorageStats } from '../types';
+import { AppConfig, BandwidthStats, BotStatus, ConnectionStatus, FileCategory, FileItem, FolderGroup, FolderItem, SortField, SortOrder, StorageStats } from '../types';
 
 let cachedBaseUrl = 'http://127.0.0.1:8082';
 
@@ -105,6 +105,12 @@ export const api = {
   async getStats(): Promise<StorageStats> {
     const client = createApiClient();
     const res = await client.get('/api/stats');
+    return res.data;
+  },
+
+  async getConnection(): Promise<ConnectionStatus> {
+    const client = createApiClient();
+    const res = await client.get('/api/connection');
     return res.data;
   },
 

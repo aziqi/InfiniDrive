@@ -79,6 +79,18 @@ export interface StorageStats {
   user_profile?: UserProfile | null;
 }
 
+export interface ConnectionStatus {
+  user_connected: boolean;
+  proxy: {
+    type: string | null;
+    host: string | null;
+    port: number | null;
+  };
+  bot_count: number;
+  healthy_bot_count: number;
+  latency_ms: number | null;
+}
+
 export interface AppConfig {
   bot_tokens: string[];
   channel_id: string;

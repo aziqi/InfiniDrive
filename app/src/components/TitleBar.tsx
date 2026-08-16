@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import logoImg from '../assets/logo.png';
+import { ConnectionStatus } from '../types';
 import { useTranslation } from '../i18n/LanguageContext';
 
 interface TitleBarProps {
@@ -10,6 +11,7 @@ interface TitleBarProps {
   userConnected?: boolean;
   userName?: string;
   authMode?: string;
+  connection?: ConnectionStatus | null;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({ 
@@ -17,9 +19,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   activeBotsCount,
   userConnected,
   userName,
-  authMode = 'smart'
+  authMode = 'smart',
+  connection
 }) => {
   const { t } = useTranslation();
+  const connDotColor = connection
+    ? connection.user_connected
+      ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'
+      : connection.bot_count > 0
+        ? 'bg-blue-400'
+        : 'bg-rose-400'
+    : 'bg-slate-500';
+  const connPulsing = connection ? (!connection.user_connected && connection.bot_count === 0) : false;
+  let connLabel = t('conn_offline');
+  if (connection) {
+    if (connection.user_connected || connection.bot_count > 0) {
+      connLabel = connection.proxy && connection.proxy.type
+        ? `${t('conn_proxy')}: ${connection.proxy.type}`
+        : t('conn_online');
+    } else {
+      connLabel = t('conn_offline');
+    }
+  }
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -82,6 +103,21 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             </span>
           </div>
         )}
+
+        {/* Live connection-quality badge (Phase 8) */}
+        {connection && (
+          <div
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.06] text-[11px]"
+            title={connection.latency_ms != null ? `${t('conn_latency')}: ${connection.latency_ms} ms` : undefined}
+          >
+            <span className={`w-2 h-2 rounded-full ${connDotColor} ${connPulsing ? 'animate-pulse' : ''}`} />
+            <span className="text-slate-300 font-medium">{connLabel}</span>
+            {connection.latency_ms != null && connection.user_connected && (
+              <span className="text-slate-500 font-mono">{connection.latency_ms}ms</span>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Center status mode */}

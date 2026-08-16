@@ -4,7 +4,7 @@
 // (they need toast feedback) and simply invalidate these queries on success.
 import { useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { AppConfig, BandwidthStats, BotStatus, FileItem, FolderGroup, FolderItem, StorageStats } from '../types';
+import type { AppConfig, BandwidthStats, BotStatus, ConnectionStatus, FileItem, FolderGroup, FolderItem, StorageStats } from '../types';
 
 export const queryKeys = {
   health: ['health'] as const,
@@ -29,11 +29,14 @@ export function useHealth() {
   });
 }
 
-export function useConfig() {
+export function useConfig(enabled: boolean = true) {
   return useQuery({
     queryKey: queryKeys.config,
     queryFn: () => api.getConfig(),
-    enabled: true,
+    enabled,
+    retry: 3,
+    retryDelay: 500,
+    refetchInterval: enabled ? 3000 : false,
     staleTime: 10_000,
   });
 }
@@ -101,6 +104,17 @@ export function useBandwidth(enabled: boolean = true) {
   return useQuery({
     queryKey: queryKeys.bandwidth,
     queryFn: (): Promise<BandwidthStats> => api.getBandwidth(),
+    enabled,
+    staleTime: 4000,
+    refetchInterval: 10_000,
+  });
+}
+
+/** Live connection-quality snapshot (Phase 8). */
+export function useConnection(enabled: boolean) {
+  return useQuery({
+    queryKey: ['connection'],
+    queryFn: (): Promise<ConnectionStatus> => api.getConnection(),
     enabled,
     staleTime: 4000,
     refetchInterval: 10_000,

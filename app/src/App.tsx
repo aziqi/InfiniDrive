@@ -13,9 +13,9 @@ import { DeleteConfirmModal } from './components/DeleteConfirmModal';
 import { RenameModal } from './components/RenameModal';
 import { ShareDialog } from './components/ShareDialog';
 import { ToastContainer } from './components/Toast';
-import { AppConfig, BotStatus, FileItem, FolderItem, StorageStats, ToastMessage } from './types';
+import { AppConfig, BotStatus, ConnectionStatus, FileItem, FolderItem, StorageStats, ToastMessage } from './types';
 import { api } from './api/client';
-import { useHealth, useConfig, useStats, useFiles, useFolders, useLockedFolders, useBots, useRefreshAll } from './hooks/queries';
+import { useHealth, useConfig, useStats, useFiles, useFolders, useLockedFolders, useBots, useConnection, useRefreshAll } from './hooks/queries';
 import { useTranslation } from './i18n/LanguageContext';
 import { ScannedFileItem } from './utils/fileScanner';
 import { Loader2 } from 'lucide-react';
@@ -28,10 +28,10 @@ export const App: React.FC = () => {
 
   // Server-state (TanStack Query) — replaces manual fetchData() + 4s polling.
   const health = useHealth();
-  const configQuery = useConfig();
+  const sidecarReady: boolean = health.isSuccess;
+  const configQuery = useConfig(sidecarReady);
   const config: AppConfig | null = configQuery.data ?? null;
   const isConfigured: boolean | null = config ? Boolean(config.is_configured) : null;
-  const sidecarReady: boolean = health.isSuccess;
 
   const statsQuery = useStats(isConfigured === true);
   const filesQuery = useFiles(isConfigured === true);
@@ -45,6 +45,8 @@ export const App: React.FC = () => {
   const folders: FolderItem[] = foldersQuery.data ?? [{ path: '/', name: 'Root' }];
   const lockedFolders: string[] = lockedQuery.data ?? [];
   const bots: BotStatus[] = botsQuery.data ?? [];
+  const connectionQuery = useConnection(sidecarReady);
+  const connection: ConnectionStatus | null = connectionQuery.data ?? null;
   const isLoadingFiles: boolean = filesQuery.isFetching;
   
   // Modals
@@ -181,6 +183,7 @@ export const App: React.FC = () => {
         userConnected={stats?.user_account_connected}
         userName={stats?.user_profile?.username || stats?.user_profile?.first_name}
         authMode={config?.auth_mode || 'smart'}
+        connection={connection}
       />
 
       {/* Main Content Area */}
