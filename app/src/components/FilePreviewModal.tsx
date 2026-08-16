@@ -1,3 +1,4 @@
+// InfiniDrive — In-app file preview for images, video, audio, PDF, and text
 import React, { useState, useEffect } from 'react';
 import { 
   X, 
