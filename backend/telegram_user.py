@@ -476,7 +476,7 @@ class TelegramUserManager:
             msg = await self.client.send_file(
                 target_peer,
                 file_handle,
-                caption=f"ð {filename}\nâ¡ Engine: MTProto Turbo",
+                caption=f"[Photo] {filename}\n Engine: MTProto Turbo",
                 force_document=True,
                 attributes=[DocumentAttributeFilename(file_name=filename)]
             )
@@ -545,7 +545,7 @@ class TelegramUserManager:
                 chunk_data = await asyncio.to_thread(read_slice)
                 actual_chunk_size = len(chunk_data)
                 part_filename = f"{filename}.part{idx+1:04d}.tgpart"
-                caption = f"ð¦ {filename} (Part {idx+1}/{total_chunks})\nâ¡ Engine: MTProto User Client"
+                caption = f"[Chunk] {filename} (Part {idx+1}/{total_chunks})\n Engine: MTProto User Client"
 
                 success = False
                 retries = 0

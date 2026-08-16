@@ -206,7 +206,7 @@ class BotCluster:
             msg = await bot_instance.bot.send_document(
                 chat_id=chat_id,
                 document=doc_io,
-                caption=f"ð§© {filename}",
+                caption=f"[Video] {filename}",
                 filename=filename,
                 read_timeout=300.0,
                 write_timeout=300.0,
@@ -239,7 +239,7 @@ class BotCluster:
                 msg = await bot_instance.bot.send_video(
                     chat_id=chat_id,
                     video=file_obj,
-                    caption=f"ð {filename}",
+                    caption=f"[Photo] {filename}",
                     supports_streaming=True,
                     read_timeout=600.0,
                     write_timeout=600.0,
@@ -249,7 +249,7 @@ class BotCluster:
                 msg = await bot_instance.bot.send_audio(
                     chat_id=chat_id,
                     audio=file_obj,
-                    caption=f"ðµ {filename}",
+                    caption=f"[Audio] {filename}",
                     filename=filename,
                     read_timeout=600.0,
                     write_timeout=600.0,
@@ -259,7 +259,7 @@ class BotCluster:
                 msg = await bot_instance.bot.send_document(
                     chat_id=chat_id,
                     document=file_obj,
-                    caption=f"ð {filename}",
+                    caption=f"[Doc] {filename}",
                     filename=filename,
                     read_timeout=600.0,
                     write_timeout=600.0,
