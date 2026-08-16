@@ -263,6 +263,28 @@ export const api = {
     return `${cachedBaseUrl}/thumbnail/${fileId}`;
   },
 
+  async createShare(fileId: string, opts?: { password?: string; expiresDays?: number }) {
+    const client = createApiClient();
+    const res = await client.post('/api/share', {
+      file_id: fileId,
+      password: opts?.password,
+      expires_days: opts?.expiresDays
+    });
+    return res.data;
+  },
+
+  async listShares() {
+    const client = createApiClient();
+    const res = await client.get('/api/shares');
+    return res.data;
+  },
+
+  async revokeShare(token: string) {
+    const client = createApiClient();
+    const res = await client.delete(`/api/share/${token}`);
+    return res.data;
+  },
+
   async getLogs(since: number = 0): Promise<{ logs: any[] }> {
     const client = createApiClient();
     const res = await client.get('/api/logs', { params: { since } });

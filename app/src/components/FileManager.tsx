@@ -34,7 +34,8 @@ import {
   Sparkles,
   Shield,
   Key,
-  Layers
+  Layers,
+  Share2
 } from 'lucide-react';
 import { FileCategory, FileItem, FolderItem, SortField, SortOrder } from '../types';
 import { api } from '../api/client';
@@ -63,6 +64,7 @@ interface FileManagerProps {
   onRename: (file: FileItem) => void;
   onOpenUpload: () => void;
   onFilesDropped: (items: ScannedFileItem[]) => void;
+  onShare?: (file: FileItem) => void;
   onToast: (type: 'success' | 'error' | 'info' | 'warning', title: string, message?: string) => void;
 }
 
@@ -87,6 +89,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
   onRename,
   onOpenUpload,
   onFilesDropped,
+  onShare,
   onToast
 }) => {
   const { t } = useTranslation();
@@ -1042,6 +1045,13 @@ export const FileManager: React.FC<FileManagerProps> = ({
                         <span>{t('fm_menu_copy_link')}</span>
                       </button>
                       <button
+                        onClick={() => { onShare?.(file); setActiveMenuId(null); }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-blue-400" />
+                        <span>{t('fm_menu_share')}</span>
+                      </button>
+                      <button
                         onClick={() => { onRename(file); setActiveMenuId(null); }}
                         className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-white/10 text-left transition-colors cursor-pointer"
                       >
@@ -1218,6 +1228,13 @@ export const FileManager: React.FC<FileManagerProps> = ({
                       title={t('fm_menu_copy_link')}
                     >
                       {copiedId === file.file_id ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => onShare?.(file)}
+                      className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-blue-400 transition-colors cursor-pointer"
+                      title={t('fm_menu_share')}
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => onDownload(file)}
