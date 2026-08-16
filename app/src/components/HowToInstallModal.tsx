@@ -366,7 +366,7 @@ export const HowToInstallModal: React.FC<HowToInstallModalProps> = ({ isOpen, on
         {/* Footer */}
         <div className="p-4 border-t border-white/5 bg-[#0d0f16] flex items-center justify-between">
           <span className="text-xs text-slate-500 font-medium">
-            InfiniDrive Desktop v2.0 · Turbo Edition
+            InfiniDrive Desktop v2.0 - Turbo Edition
           </span>
           <button
             onClick={onClose}

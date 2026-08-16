@@ -1,4 +1,4 @@
-// InfiniDrive — Share dialog: create/copy a protected share link, set
+// InfiniDrive - Share dialog: create/copy a protected share link, set
 // password + expiry, and revoke. Backend already mints share_token on
 // upload; this dialog creates a managed share row for direct download links.
 import React, { useEffect, useState, useCallback } from 'react';

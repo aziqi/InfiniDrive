@@ -1,4 +1,4 @@
-// InfiniDrive — Centralized design tokens (mirrors index.css CSS variables).
+// InfiniDrive - Centralized design tokens (mirrors index.css CSS variables).
 // Use these in TS/JS contexts (charts, canvas, inline styles) so the
 // design language stays in one place alongside the CSS variable source.
 export const tokens = {

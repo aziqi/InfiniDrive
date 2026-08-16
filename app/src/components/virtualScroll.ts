@@ -1,4 +1,4 @@
-// InfiniDrive — shared helpers for the windowed (virtualized) file views.
+// InfiniDrive - shared helpers for the windowed (virtualized) file views.
 //
 // VirtualGrid and VirtualList both render INSIDE the FileManager scroll container
 // (which itself lives inside the outer wrapper that owns the drag & drop handlers

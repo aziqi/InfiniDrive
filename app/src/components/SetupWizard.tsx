@@ -264,7 +264,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onToast })
                         {userProfile.username && <span className="text-slate-400 font-mono">(@{userProfile.username})</span>}
                       </div>
                       <div className="text-[10px] text-slate-400">
-                        {userProfile.phone} Â· Limit: <strong className="text-purple-300">{userProfile.upload_limit_gb} GB</strong>/file
+                        {userProfile.phone} • Limit: <strong className="text-purple-300">{userProfile.upload_limit_gb} GB</strong>/file
                       </div>
                     </div>
                   </div>

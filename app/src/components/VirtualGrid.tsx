@@ -1,4 +1,4 @@
-// InfiniDrive — virtualized (windowed) grid for the FileManager grid view.
+// InfiniDrive - virtualized (windowed) grid for the FileManager grid view.
 //
 // Only the visible ROWS are mounted. Each row renders `columns` cards produced by
 // the `renderItem` callback that still lives in FileManager scope, so multi-select,
@@ -32,7 +32,7 @@ export interface VirtualGridProps<T> {
   zoomLevel: number;
   /** Ref of the scroll container (owned by FileManager, inside the DnD wrapper). */
   scrollElementRef: RefObject<HTMLElement | null>;
-  /** Must return an element WITH a React key — identical JSX to the old grid. */
+  /** Must return an element WITH a React key - identical JSX to the old grid. */
   renderItem: (item: T, index: number) => React.ReactNode;
   /** Any change forces a re-measure of the offset inside the scroll container. */
   recalcKey?: string | number;

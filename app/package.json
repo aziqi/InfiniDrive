@@ -1,7 +1,7 @@
 {
   "name": "infinidrive-desktop",
   "version": "1.0.0",
-  "description": "InfiniDrive — High-Performance Telegram Cloud Storage Desktop App for Windows & Linux",
+  "description": "InfiniDrive - High-Performance Telegram Cloud Storage Desktop App for Windows & Linux",
   "main": "electron/main.cjs",
   "author": "Antigravity",
   "license": "MIT",

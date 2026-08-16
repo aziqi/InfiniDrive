@@ -1,4 +1,4 @@
-// InfiniDrive — Centralized server-state via TanStack Query.
+// InfiniDrive - Centralized server-state via TanStack Query.
 // Replaces the manual fetchData() + 4s polling loop in App.tsx with
 // cacheable, refetchable queries. Mutations still live in the UI layer
 // (they need toast feedback) and simply invalidate these queries on success.

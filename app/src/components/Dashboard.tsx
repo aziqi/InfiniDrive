@@ -221,7 +221,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
           <div className="p-2.5 rounded-xl bg-blue-500/[0.06] border border-blue-500/20 text-[11px] text-blue-300 flex items-center gap-2">
             <Sparkle weight="fill" className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span>Zero TCP Stall Â· Zero-Copy Slicing</span>
+            <span>Zero TCP Stall • Zero-Copy Slicing</span>
           </div>
 
           <button
@@ -297,7 +297,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {file.file_name}
                     </h4>
                     <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                      {formatBytes(file.file_size)} Â· {new Date(file.uploaded_at).toLocaleDateString()}
+                      {formatBytes(file.file_size)} • {new Date(file.uploaded_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

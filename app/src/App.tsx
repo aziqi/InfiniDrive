@@ -26,7 +26,7 @@ export const App: React.FC = () => {
   const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
   const [currentFolder, setCurrentFolder] = useState<string>('all');
 
-  // Server-state (TanStack Query) — replaces manual fetchData() + 4s polling.
+  // Server-state (TanStack Query) - replaces manual fetchData() + 4s polling.
   const health = useHealth();
   const sidecarReady: boolean = health.isSuccess;
   const configQuery = useConfig(sidecarReady);

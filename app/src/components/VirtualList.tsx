@@ -1,4 +1,4 @@
-// InfiniDrive — virtualized (windowed) single-column list for the FileManager list view.
+// InfiniDrive - virtualized (windowed) single-column list for the FileManager list view.
 //
 // Only the visible rows are mounted. Each row is produced by the `renderItem`
 // callback that still lives in FileManager scope, so the 12-column list-item
@@ -17,7 +17,7 @@ export interface VirtualListProps<T> {
   items: T[];
   /** Ref of the scroll container (owned by FileManager, inside the DnD wrapper). */
   scrollElementRef: RefObject<HTMLElement | null>;
-  /** Must return an element WITH a React key — identical JSX to the old list. */
+  /** Must return an element WITH a React key - identical JSX to the old list. */
   renderItem: (item: T, index: number) => React.ReactNode;
   /** Any change forces a re-measure of the offset inside the scroll container. */
   recalcKey?: string | number;

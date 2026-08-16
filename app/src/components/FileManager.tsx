@@ -649,7 +649,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
   const zoomPercents = [75, 90, 100, 125, 150];
 
-  // Grid card renderer — JSX lifted verbatim out of the previous inline map so all
+  // Grid card renderer - JSX lifted verbatim out of the previous inline map so all
   // handlers (select, context menu, thumbnails, badges) stay in FileManager scope.
   const renderFileCard = (file: FileItem) => {
     const isSelected = selectedIds.has(file.file_id);
@@ -798,7 +798,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
 
           {file.upload_source === 'user_account' && (
             <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/30 text-[9px] font-bold text-purple-300">
-              ð¤ MTProto
+               MTProto
             </span>
           )}
         </div>
@@ -817,7 +817,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
     );
   };
 
-  // List row renderer — JSX lifted verbatim out of the previous inline map.
+  // List row renderer - JSX lifted verbatim out of the previous inline map.
   const renderFileRow = (file: FileItem) => {
     const isSelected = selectedIds.has(file.file_id);
 
@@ -856,11 +856,11 @@ export const FileManager: React.FC<FileManagerProps> = ({
             </span>
             {file.upload_source === 'user_account' ? (
               <span className="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[9px] font-mono shrink-0">
-                ð¤ MTProto
+                 MTProto
               </span>
             ) : (
               <span className="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[9px] font-mono shrink-0">
-                ð¤ Bot
+                 Bot
               </span>
             )}
             {Boolean(file.is_chunked) && (
@@ -1222,7 +1222,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
             )}
           </div>
         ) : viewMode === 'grid' ? (
-          /* Grid View — virtualized rows, zoom-driven dynamic column count */
+          /* Grid View - virtualized rows, zoom-driven dynamic column count */
           <VirtualGrid
             items={filteredFiles}
             zoomLevel={zoomLevel}
@@ -1252,7 +1252,7 @@ export const FileManager: React.FC<FileManagerProps> = ({
               <div className="col-span-1 text-right">{t('fm_th_actions')}</div>
             </div>
 
-            {/* List Items — virtualized rows */}
+            {/* List Items - virtualized rows */}
             <VirtualList
               items={filteredFiles}
               scrollElementRef={scrollContainerRef}
