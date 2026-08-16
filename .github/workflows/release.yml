@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install system tooling
-        run: sudo apt-get update ; sudo apt-get install -y fakeroot rpm dpkg
+        run: sudo apt-get update ; sudo apt-get install -y fakeroot rpm dpkg libarchive-tools bsdtar
       - name: Install backend dependencies
         run: python -m pip install --upgrade pip ; pip install -r backend/requirements.txt
       - name: Compile backend sidecar (PyInstaller)
