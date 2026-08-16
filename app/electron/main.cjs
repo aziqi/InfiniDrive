@@ -433,3 +433,5 @@ app.on('window-all-closed', () => {
   stopSidecar();
   app.exit(0);
 });
+
+// InfiniDrive Electron main — sidecar lifecycle manager auto-kills backend on app quit
