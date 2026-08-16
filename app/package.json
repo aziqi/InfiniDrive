@@ -2,8 +2,12 @@
   "name": "infinidrive-desktop",
   "version": "1.1.0",
   "description": "InfiniDrive - High-Performance Telegram Cloud Storage Desktop App for Windows & Linux",
+  "homepage": "https://github.com/aziqi/InfiniDrive",
   "main": "electron/main.cjs",
-  "author": "Antigravity",
+  "author": {
+    "name": "aziqi",
+    "email": "aziqi@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "vite",
@@ -102,6 +106,7 @@
     },
     "linux": {
       "icon": "electron/icon.png",
+      "maintainer": "aziqi <aziqi@users.noreply.github.com>",
       "target": [
         "AppImage",
         "tar.gz",
