@@ -1,7 +1,7 @@
 {
   "name": "infinidrive-desktop",
-  "version": "1.0.0" ,
-  "description": "InfiniDrive — High-Performance Telegram Cloud Storage Desktop App for Windows 11",
+  "version": "1.0.0",
+  "description": "InfiniDrive — High-Performance Telegram Cloud Storage Desktop App for Windows & Linux",
   "main": "electron/main.cjs",
   "author": "Antigravity",
   "license": "MIT",
@@ -70,7 +70,8 @@
         "from": "../resources/bin",
         "to": "bin",
         "filter": [
-          "infinidrive_backend.exe"
+          "infinidrive_backend.exe",
+          "infinidrive_backend"
         ]
       }
     ],
@@ -94,6 +95,22 @@
       "artifactName": "InfiniDrive-Portable-${version}.${ext}",
       "requestExecutionLevel": "user",
       "unpackDirName": "InfiniDrivePortable"
+    },
+    "linux": {
+      "icon": "electron/icon.png",
+      "target": [
+        "AppImage",
+        "tar.gz",
+        "deb",
+        "pacman"
+      ],
+      "category": "Utility",
+      "desktop": {
+        "StartupWMClass": "InfiniDrive",
+        "Name": "InfiniDrive",
+        "Comment": "Infinite Telegram Cloud Storage Desktop App",
+        "Categories": "Utility;Network;FileTransfer;"
+      }
     }
   }
 }

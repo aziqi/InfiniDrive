@@ -1,4 +1,4 @@
-# InfiniDrive Smart Dual-Engine Config — auto-selects MTProto for files >= smart_threshold_mb
+# InfiniDrive Smart Dual-Engine Config Â— auto-selects MTProto for files >= smart_threshold_mb
 import os
 import json
 import logging
@@ -13,7 +13,15 @@ def get_default_config_dir() -> Path:
     if app_data:
         config_dir = Path(app_data) / "InfiniDrive"
     else:
-        config_dir = Path.home() / ".infinidrive"
+        # Linux / macOS standard
+        xdg_config = os.getenv("XDG_CONFIG_HOME")
+        if xdg_config:
+            config_dir = Path(xdg_config) / "infinidrive"
+        else:
+            config_dir = Path.home() / ".config" / "infinidrive"
+            legacy_dot = Path.home() / ".infinidrive"
+            if not config_dir.exists() and legacy_dot.exists():
+                return legacy_dot
     config_dir.mkdir(parents=True, exist_ok=True)
     
     # Migration: copy legacy TGDrive config & db if they exist

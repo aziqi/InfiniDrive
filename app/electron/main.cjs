@@ -13,19 +13,36 @@ let isQuitting = false;
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 function getAppDataDir() {
-  const appData = process.env.APPDATA || (process.platform === 'darwin' ? process.env.HOME + '/Library/Application Support' : '/var/local');
-  const dir = path.join(appData, 'InfiniDrive');
+  let dir;
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA || path.join(process.env.USERPROFILE || 'C:\\', 'AppData', 'Roaming');
+    dir = path.join(appData, 'InfiniDrive');
+  } else if (process.platform === 'darwin') {
+    dir = path.join(process.env.HOME || '/tmp', 'Library', 'Application Support', 'InfiniDrive');
+  } else {
+    // Linux / BSD: Use XDG_CONFIG_HOME standard (~/.config/infinidrive)
+    const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '/tmp', '.config');
+    dir = path.join(xdgConfig, 'infinidrive');
+    const legacyDotDir = path.join(process.env.HOME || '/tmp', '.infinidrive');
+    if (!fs.existsSync(dir) && fs.existsSync(legacyDotDir)) {
+      return legacyDotDir;
+    }
+  }
+
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-  // Migration fallback: if TGDrive exists and InfiniDrive config doesn't, copy config
-  const oldDir = path.join(appData, 'TGDrive');
-  const oldConfig = path.join(oldDir, 'config.json');
-  const newConfig = path.join(dir, 'config.json');
-  if (fs.existsSync(oldConfig) && !fs.existsSync(newConfig)) {
-    try {
-      fs.copyFileSync(oldConfig, newConfig);
-    } catch (e) {}
+
+  // Windows Migration fallback: if TGDrive exists and InfiniDrive config doesn't, copy config
+  if (process.platform === 'win32' && process.env.APPDATA) {
+    const oldDir = path.join(process.env.APPDATA, 'TGDrive');
+    const oldConfig = path.join(oldDir, 'config.json');
+    const newConfig = path.join(dir, 'config.json');
+    if (fs.existsSync(oldConfig) && !fs.existsSync(newConfig)) {
+      try {
+        fs.copyFileSync(oldConfig, newConfig);
+      } catch (e) {}
+    }
   }
   return dir;
 }
@@ -39,11 +56,31 @@ function logSidecar(msg) {
   }
 }
 
+function findPythonCommand() {
+  const possibleVenvs = [
+    path.join(__dirname, '..', '..', 'backend', 'venv', 'bin', 'python'),
+    path.join(__dirname, '..', '..', 'backend', 'venv', 'bin', 'python3'),
+    path.join(__dirname, '..', '..', 'backend', '.venv', 'bin', 'python'),
+    path.join(__dirname, '..', '..', 'backend', 'venv', 'Scripts', 'python.exe'),
+    path.join(__dirname, '..', '..', 'backend', '.venv', 'Scripts', 'python.exe'),
+  ];
+
+  for (const venvPy of possibleVenvs) {
+    if (fs.existsSync(venvPy)) {
+      return venvPy;
+    }
+  }
+
+  if (process.platform !== 'win32') {
+    return 'python3';
+  }
+  return 'python';
+}
+
 function startSidecar() {
   const appDataDir = getAppDataDir();
   const runtimeFile = path.join(appDataDir, 'runtime.json');
   
-  // Clean old runtime file
   if (fs.existsSync(runtimeFile)) {
     try {
       const oldData = JSON.parse(fs.readFileSync(runtimeFile, 'utf8'));
@@ -56,12 +93,14 @@ function startSidecar() {
     }
   }
 
-  // Look for packaged executable first
   const binDir = path.join(process.resourcesPath || __dirname, 'bin');
-  const exePath = path.join(binDir, 'infinidrive_backend.exe');
-  const legacyExePath = path.join(binDir, 'tgdrive_backend.exe');
-  const localExePath = path.join(__dirname, '..', '..', 'resources', 'bin', 'infinidrive_backend.exe');
-  const localLegacyExePath = path.join(__dirname, '..', '..', 'resources', 'bin', 'tgdrive_backend.exe');
+  const exeName = process.platform === 'win32' ? 'infinidrive_backend.exe' : 'infinidrive_backend';
+  const legacyExeName = process.platform === 'win32' ? 'tgdrive_backend.exe' : 'tgdrive_backend';
+
+  const exePath = path.join(binDir, exeName);
+  const legacyExePath = path.join(binDir, legacyExeName);
+  const localExePath = path.join(__dirname, '..', '..', 'resources', 'bin', exeName);
+  const localLegacyExePath = path.join(__dirname, '..', '..', 'resources', 'bin', legacyExeName);
   const pythonScript = path.join(__dirname, '..', '..', 'backend', 'run_sidecar.py');
 
   let cmd = '';
@@ -84,8 +123,9 @@ function startSidecar() {
     cmd = localLegacyExePath;
     args = [];
   } else {
-    logSidecar(`Launching Python backend script: ${pythonScript}`);
-    cmd = 'python';
+    const pyCmd = findPythonCommand();
+    logSidecar(`Launching Python backend script via [${pyCmd}]: ${pythonScript}`);
+    cmd = pyCmd;
     args = [pythonScript];
   }
 
@@ -94,7 +134,7 @@ function startSidecar() {
       windowsHide: true,
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
     };
-    if (cmd !== 'python' && fs.existsSync(cmd)) {
+    if (cmd !== 'python' && cmd !== 'python3' && fs.existsSync(cmd)) {
       spawnOpts.cwd = path.dirname(cmd);
     }
     sidecarProcess = spawn(cmd, args, spawnOpts);
@@ -102,7 +142,6 @@ function startSidecar() {
     sidecarProcess.stdout.on('data', (data) => {
       const str = data.toString().trim();
       logSidecar(str);
-      // Check if port announced
       const portMatch = str.match(/http:\/\/127\.0\.0\.1:(\d+)/);
       if (portMatch) {
         sidecarPort = parseInt(portMatch[1], 10);
@@ -134,7 +173,11 @@ function killProcessTree(pid) {
         execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore' });
       } catch (e) {}
     } else {
-      process.kill(pid, 'SIGKILL');
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch (e) {
+        try { process.kill(pid, 'SIGKILL'); } catch (e2) {}
+      }
     }
   } catch (e) {
     console.error(`Error killing PID ${pid}:`, e);
@@ -161,7 +204,6 @@ function waitForSidecar(callback, maxAttempts = 60) {
   let attempts = 0;
   const check = () => {
     attempts++;
-    // Check runtime.json first
     const runtimeFile = path.join(getAppDataDir(), 'runtime.json');
     if (fs.existsSync(runtimeFile)) {
       try {
@@ -185,241 +227,122 @@ function waitForSidecar(callback, maxAttempts = 60) {
       else callback(false, sidecarPort);
     });
 
-    req.setTimeout(800, () => {
-      req.abort();
+    req.setTimeout(500, () => {
+      req.destroy();
+      if (attempts < maxAttempts) setTimeout(check, 250);
+      else callback(false, sidecarPort);
     });
   };
-
   check();
 }
 
-const { Notification } = require('electron');
-let tray = null;
-
-function createTray() {
-  if (tray) return;
-
-  const iconPath = path.join(__dirname, 'icon.png');
-  try {
-    tray = new Tray(iconPath);
-    tray.setToolTip('InfiniDrive â€” Infinite Cloud Storage');
-
-    const updateTrayMenu = () => {
-      const contextMenu = Menu.buildFromTemplate([
-        {
-          label: 'Show InfiniDrive',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.focus();
-            }
-          }
-        },
-        {
-          label: 'Upload Files...',
-          click: () => {
-            if (mainWindow) {
-              mainWindow.show();
-              mainWindow.webContents.send('tray:open-upload');
-            }
-          }
-        },
-        { type: 'separator' },
-        {
-          label: `Sidecar Port: ${sidecarPort} (Online)`,
-          enabled: false
-        },
-        { type: 'separator' },
-        {
-          label: 'Quit InfiniDrive',
-          click: () => {
-            isQuitting = true;
-            stopSidecar();
-            app.quit();
-          }
-        }
-      ]);
-      tray.setContextMenu(contextMenu);
-    };
-
-    updateTrayMenu();
-
-    tray.on('double-click', () => {
-      if (!mainWindow) return;
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    });
-
-    tray.on('click', () => {
-      if (!mainWindow) return;
-      if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
-        mainWindow.focus();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    });
-  } catch (err) {
-    console.error('Failed to create tray:', err);
-  }
-}
-
 function createWindow() {
+  const iconPath = process.platform === 'win32'
+    ? path.join(__dirname, 'icon.ico')
+    : path.join(__dirname, 'icon.png');
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 840,
-    minWidth: 960,
-    minHeight: 640,
+    width: 1200,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     frame: false,
     titleBarStyle: 'hidden',
-    backgroundColor: '#0a0b0e',
-    icon: path.join(__dirname, 'icon.png'),
-    show: false,
+    titleBarOverlay: false,
+    backgroundColor: '#0a0d14',
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false
-    }
+      webSecurity: true,
+      sandbox: false,
+    },
   });
 
-  const distPath = path.join(__dirname, '..', 'dist', 'index.html');
-  if (isDev && !fs.existsSync(distPath)) {
+  if (isDev) {
     mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadFile(distPath);
+    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
   });
 
-  mainWindow.on('maximize', () => {
-    mainWindow.webContents.send('window:state-changed', { isMaximized: true });
-  });
-
-  mainWindow.on('unmaximize', () => {
-    mainWindow.webContents.send('window:state-changed', { isMaximized: false });
-  });
-
-  mainWindow.on('close', () => {
-    isQuitting = true;
-    stopSidecar();
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      // Clean quit
+    }
   });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    stopSidecar();
-    app.exit(0);
   });
 }
 
-// IPC Handlers
-ipcMain.handle('window:minimize', () => mainWindow?.minimize());
-ipcMain.handle('window:hideToTray', () => {
-  isQuitting = true;
-  stopSidecar();
-  app.exit(0);
+// Window control IPC handlers
+ipcMain.on('window:minimize', () => {
+  if (mainWindow) mainWindow.minimize();
 });
-ipcMain.handle('window:maximize', () => {
-  if (mainWindow?.isMaximized()) mainWindow.unmaximize();
-  else mainWindow?.maximize();
-  return mainWindow?.isMaximized();
-});
-ipcMain.handle('window:close', () => {
-  isQuitting = true;
-  stopSidecar();
-  app.exit(0);
-});
-ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized());
 
-ipcMain.handle('app:showNotification', (event, { title, body }) => {
-  if (Notification.isSupported()) {
-    try {
-      const notif = new Notification({
-        title: title || 'InfiniDrive',
-        body: body || '',
-        icon: path.join(__dirname, 'icon.png')
-      });
-      notif.on('click', () => {
-        if (mainWindow) {
-          mainWindow.show();
-          mainWindow.focus();
-        }
-      });
-      notif.show();
-    } catch (e) {
-      console.error('Notification error:', e);
-    }
+ipcMain.on('window:maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
   }
 });
 
-ipcMain.handle('dialog:openFiles', async (event, options) => {
-  const res = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile', 'multiSelections'],
-    ...options
-  });
-  return res.filePaths;
+ipcMain.on('window:close', () => {
+  if (mainWindow) mainWindow.close();
 });
 
-ipcMain.handle('dialog:openDirectory', async (event, options) => {
-  const res = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openDirectory', 'multiSelections'],
-    ...options
-  });
-  return res.filePaths;
+ipcMain.on('window:isMaximized', (event) => {
+  event.returnValue = mainWindow ? mainWindow.isMaximized() : false;
 });
 
-ipcMain.handle('dialog:saveFile', async (event, defaultName) => {
-  const res = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: defaultName
-  });
-  return res.filePath;
-});
+ipcMain.handle('app:getPort', () => sidecarPort);
 
-ipcMain.handle('shell:openExternal', (event, url) => shell.openExternal(url));
-ipcMain.handle('shell:showItemInFolder', (event, filePath) => shell.showItemInFolder(filePath));
+ipcMain.handle('app:getLogs', () => sidecarLogs);
 
-ipcMain.handle('sidecar:getStatus', () => {
-  return {
-    running: !!sidecarProcess,
-    port: sidecarPort,
-    baseUrl: `http://127.0.0.1:${sidecarPort}`,
-    logs: sidecarLogs
-  };
-});
-
-ipcMain.handle('sidecar:restart', async () => {
+ipcMain.handle('app:restartSidecar', async () => {
   stopSidecar();
-  await new Promise(r => setTimeout(r, 1000));
   startSidecar();
   return new Promise((resolve) => {
-    waitForSidecar((ready, port) => {
-      resolve({ ready, port, baseUrl: `http://127.0.0.1:${port}` });
+    waitForSidecar((ok, port) => {
+      resolve({ success: ok, port });
     });
   });
 });
 
-ipcMain.handle('app:getConfigPath', () => {
-  return path.join(getAppDataDir(), 'config.json');
+ipcMain.handle('dialog:openFolder', async () => {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths[0];
 });
 
-// App Lifecycle
+ipcMain.handle('dialog:openFile', async () => {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  return result.filePaths;
+});
+
+// App lifecycle
 app.whenReady().then(() => {
   startSidecar();
   createWindow();
-  createTray();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
-    } else if (mainWindow) {
-      mainWindow.show();
-      mainWindow.focus();
     }
   });
 });
@@ -429,9 +352,13 @@ app.on('before-quit', () => {
   stopSidecar();
 });
 
-app.on('window-all-closed', () => {
+app.on('will-quit', () => {
   stopSidecar();
-  app.exit(0);
 });
 
-// InfiniDrive Electron main — sidecar lifecycle manager auto-kills backend on app quit
+app.on('window-all-closed', () => {
+  stopSidecar();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
