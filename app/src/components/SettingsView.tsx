@@ -35,6 +35,34 @@ interface SettingsViewProps {
   onToast: (type: 'success' | 'error' | 'info' | 'warning', title: string, message?: string) => void;
 }
 
+const PROXY_TYPES: { value: 'none' | 'socks5' | 'socks4' | 'http' | 'mtproto'; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'socks5', label: 'SOCKS5' },
+  { value: 'socks4', label: 'SOCKS4' },
+  { value: 'http', label: 'HTTP' },
+  { value: 'mtproto', label: 'MTProto' },
+];
+
+type ProxyParsed = { type: 'none' | 'socks5' | 'socks4' | 'http' | 'mtproto'; host: string; port: string; user: string; pass: string; secret: string };
+
+function parseProxyUrl(raw: string): ProxyParsed {
+  const empty: ProxyParsed = { type: 'none', host: '', port: '', user: '', pass: '', secret: '' };
+  if (!raw) return empty;
+  try {
+    const u = new URL(raw);
+    const scheme = u.protocol.replace(':', '');
+    if (scheme === 'socks5') {
+      return { type: 'socks5', host: u.hostname, port: u.port, user: decodeURIComponent(u.username || ''), pass: decodeURIComponent(u.password || ''), secret: '' };
+    }
+    if (scheme === 'socks4') return { type: 'socks4', host: u.hostname, port: u.port, user: '', pass: '', secret: '' };
+    if (scheme === 'http' || scheme === 'https') return { type: 'http', host: u.hostname, port: u.port, user: '', pass: '', secret: '' };
+    if (scheme === 'mtproxy') return { type: 'mtproto', host: u.hostname, port: u.port, user: '', pass: '', secret: decodeURIComponent(u.username || '') };
+  } catch {
+    /* malformed proxy url; fall back to empty */
+  }
+  return empty;
+}
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
   config,
   onRefreshConfig,
@@ -58,7 +86,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [channelId, setChannelId] = useState('');
   const [apiKey, setApiKey] = useState('');
-  const [proxyUrl, setProxyUrl] = useState('');
+  const [proxyType, setProxyType] = useState<'none' | 'socks5' | 'socks4' | 'http' | 'mtproto'>('none');
+  const [proxyHost, setProxyHost] = useState('');
+  const [proxyPort, setProxyPort] = useState('');
+  const [proxyUser, setProxyUser] = useState('');
+  const [proxyPass, setProxyPass] = useState('');
+  const [proxySecret, setProxySecret] = useState('');
 
   // MTProto Personal Account state
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -89,7 +122,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     if (config) {
       setChannelId(config.channel_id || '');
       setApiKey(config.admin_api_key || '');
-      setProxyUrl(config.proxy_url || '');
+      const pp = parseProxyUrl(config.proxy_url || '');
+      setProxyType(pp.type);
+      setProxyHost(pp.host);
+      setProxyPort(pp.port);
+      setProxyUser(pp.user);
+      setProxyPass(pp.pass);
+      setProxySecret(pp.secret);
       setAuthMode(config.auth_mode || 'smart');
       setSmartThresholdMb(config.smart_threshold_mb || 20);
       setThrottleDelaySec(config.throttle_delay_sec || 1.0);
@@ -288,12 +327,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const buildProxyUrl = (): string => {
+    const host = proxyHost.trim();
+    const port = proxyPort.trim();
+    if (proxyType === 'none' || !host || !port) return '';
+    if (proxyType === 'socks5') {
+      const auth = proxyUser.trim() ? `${encodeURIComponent(proxyUser.trim())}:${encodeURIComponent(proxyPass)}@` : '';
+      return `socks5://${auth}${host}:${port}`;
+    }
+    if (proxyType === 'socks4') return `socks4://${host}:${port}`;
+    if (proxyType === 'http') return `http://${host}:${port}`;
+    if (proxyType === 'mtproto') {
+      const secret = proxySecret.trim();
+      if (!secret) return '';
+      return `mtproxy://${secret}@${host}:${port}`;
+    }
+    return '';
+  };
+
   const handleSaveAllSettings = async () => {    setIsSaving(true);
     try {
       await api.updateConfig({
         channel_id: channelId.trim(),
         admin_api_key: apiKey.trim() || 'tgdrive_secret_key',
-        proxy_url: proxyUrl.trim() || undefined,
+        proxy_url: buildProxyUrl() || undefined,
         auth_mode: authMode,
         smart_threshold_mb: smartThresholdMb,
         throttle_delay_sec: throttleDelaySec,
@@ -778,18 +835,83 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2 lg:col-span-2">
               <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-emerald-400" />
                 {t('set_proxy_label')}
               </label>
-              <input
-                type="text"
-                value={proxyUrl}
-                onChange={(e) => setProxyUrl(e.target.value)}
-                placeholder="http://127.0.0.1:1080"
-                className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
-              />
+              <select
+                value={proxyType}
+                onChange={(e) => setProxyType(e.target.value as 'none' | 'socks5' | 'socks4' | 'http' | 'mtproto')}
+                className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 focus:border-blue-500 outline-none"
+              >
+                {PROXY_TYPES.map((pt) => (
+                  <option key={pt.value} value={pt.value}>{pt.label}</option>
+                ))}
+              </select>
+
+              {proxyType !== 'none' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium text-slate-400">{t('settings_proxy_host')}</label>
+                    <input
+                      type="text"
+                      value={proxyHost}
+                      onChange={(e) => setProxyHost(e.target.value)}
+                      placeholder="127.0.0.1"
+                      className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium text-slate-400">{t('settings_proxy_port')}</label>
+                    <input
+                      type="text"
+                      value={proxyPort}
+                      onChange={(e) => setProxyPort(e.target.value)}
+                      placeholder="1080"
+                      className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
+                    />
+                  </div>
+
+                  {proxyType === 'socks5' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-medium text-slate-400">{t('settings_proxy_user')}</label>
+                        <input
+                          type="text"
+                          value={proxyUser}
+                          onChange={(e) => setProxyUser(e.target.value)}
+                          placeholder="user (optional)"
+                          className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-medium text-slate-400">{t('settings_proxy_pass')}</label>
+                        <input
+                          type="password"
+                          value={proxyPass}
+                          onChange={(e) => setProxyPass(e.target.value)}
+                          placeholder="password (optional)"
+                          className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {proxyType === 'mtproto' && (
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-[11px] font-medium text-slate-400">{t('settings_proxy_secret')}</label>
+                      <input
+                        type="text"
+                        value={proxySecret}
+                        onChange={(e) => setProxySecret(e.target.value)}
+                        placeholder="MTProto secret (hex or ee-prefixed)"
+                        className="w-full bg-[#0a0c12] border border-white/10 rounded-xl p-2 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
